@@ -83,11 +83,11 @@ TESTS =
 BENCHMARKS =
 
 if BUILD_BITCOIND
-  bin_PROGRAMS += fxtcd
+  bin_PROGRAMS += batad
 endif
 
 if BUILD_BITCOIN_UTILS
-  bin_PROGRAMS += fxtc-cli fxtc-tx
+  bin_PROGRAMS += bata-cli bata-tx
 endif
 
 .PHONY: FORCE check-symbols check-security
@@ -562,16 +562,16 @@ nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
 # bitcoind binary #
-fxtcd_SOURCES = bitcoind.cpp
-fxtcd_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-fxtcd_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-fxtcd_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+batad_SOURCES = bitcoind.cpp
+batad_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+batad_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+batad_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-fxtcd_SOURCES += bitcoind-res.rc
+batad_SOURCES += bitcoind-res.rc
 endif
 
-fxtcd_LDADD = \
+batad_LDADD = \
   $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_WALLET) \
   $(LIBBITCOIN_COMMON) \
@@ -585,38 +585,38 @@ fxtcd_LDADD = \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
-fxtcd_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
+batad_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
 
 # bitcoin-cli binary #
-fxtc_cli_SOURCES = bitcoin-cli.cpp
-fxtc_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
-fxtc_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-fxtc_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+bata_cli_SOURCES = bitcoin-cli.cpp
+bata_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
+bata_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+bata_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-fxtc_cli_SOURCES += bitcoin-cli-res.rc
+bata_cli_SOURCES += bitcoin-cli-res.rc
 endif
 
-fxtc_cli_LDADD = \
+bata_cli_LDADD = \
   $(LIBBITCOIN_CLI) \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO)
 
-fxtc_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
+bata_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
 #
 
 # bitcoin-tx binary #
-fxtc_tx_SOURCES = bitcoin-tx.cpp
-fxtc_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-fxtc_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-fxtc_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+bata_tx_SOURCES = bitcoin-tx.cpp
+bata_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+bata_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+bata_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-fxtc_tx_SOURCES += bitcoin-tx-res.rc
+bata_tx_SOURCES += bitcoin-tx-res.rc
 endif
 
-fxtc_tx_LDADD = \
+bata_tx_LDADD = \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
@@ -624,7 +624,7 @@ fxtc_tx_LDADD = \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBSECP256K1)
 
-fxtc_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
+bata_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
 #
 
 # bitcoinconsensus library #

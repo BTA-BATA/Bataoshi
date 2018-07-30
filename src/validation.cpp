@@ -56,7 +56,7 @@
 #include <boost/thread.hpp>
 
 #if defined(NDEBUG)
-# error "FxTC cannot be compiled without assertions."
+# error "Bata cannot be compiled without assertions."
 #endif
 
 #define MICRO 0.000001
@@ -269,7 +269,7 @@ map<uint256, int64_t> mapRejectedBlocks GUARDED_BY(cs_main);
 /** Constant stuff for coinbase transactions we create: */
 CScript COINBASE_FLAGS;
 
-const std::string strMessageMagic = "FxTC Signed Message:\n";
+const std::string strMessageMagic = "Bata Signed Message:\n";
 
 // Internal stuff
 namespace {
@@ -1232,26 +1232,38 @@ double ConvertBitsToDouble(unsigned int nBits)
 
 CAmount GetBlockSubsidy(int nHeight, CBlockHeader pblock, const Consensus::Params& consensusParams, bool fSuperblockPartOnly)
 {
+    CAmount nSubsidy = 0;
+
     int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
     // Force block reward to zero when right shift is undefined.
     if (halvings >= 64)
         return 0;
 
-    // FXTC BEGIN
-    if (nHeight == 1)
-        return 1 * COIN;        // Founder marker (Ownership is transferred by moving this coin)
-    else if (nHeight == 2)
-        return 200000 * COIN;   // Exchange Fund (Exchange fees, Masternode listing fees, ...)
-    else if (nHeight == 3)
-        return 10000 * COIN;    // Marketing Fund (Wallet, Website, Marketing, ...)
-    else if (nHeight == 4)
-        return 789999 * COIN;   // Reserve Fund (Locked for future use)
+  // BATA BEGIN
+  // BATA TODO: add spork for multialgo start
+  if (true) { //!SPORK_FOR_MULTIALGO
+    nSubsidy = 25 * COIN;
 
-    CAmount nSubsidy = ConvertBitsToDouble(pblock.nBits) * COIN / (49500000 / pblock.GetAlgoEfficiency(nHeight)); // dynamic block reward by algo efficiency
+    if (nHeight == 1)
+        nSubsidy = 88 * COIN;
+
+    if (nHeight == 2)
+        nSubsidy = 1 * COIN;
+
+    // Subsidy is cut in half every 865,000 blocks which will occur approximately every 3 years.
+    nSubsidy >>= halvings;
+
+    if (nHeight >= 850000)
+        nSubsidy = (1 * COIN)/4 ;  //Static PoW reward of 0.25 Bata until end of PoW (10 Million Bata)
+  } else {
+  // BATA END
+    // FXTC BEGIN
+    nSubsidy = ConvertBitsToDouble(pblock.nBits) * COIN / (49500000 / pblock.GetAlgoEfficiency(nHeight)); // dynamic block reward by algo efficiency
     nSubsidy /= GetHandbrakeForce(pblock.nVersion, nHeight);
 
     // Subsidy is cut in half every 865,000 blocks which will occur approximately every 3 years.
     nSubsidy >>= halvings;
+
     // Make halvings linear since start block defined in spork
     if (nHeight >= sporkManager.GetSporkValue(SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START)) {
         nSubsidy -= ((nSubsidy >> 1) * (nHeight % consensusParams.nSubsidyHalvingInterval)) / consensusParams.nSubsidyHalvingInterval;
@@ -1261,6 +1273,9 @@ CAmount GetBlockSubsidy(int nHeight, CBlockHeader pblock, const Consensus::Param
         nSubsidy = consensusParams.nMinimumSubsidy;
     }
     // FXTC END
+  // BATA BEGIN
+  }
+  // BATA END
 
     // Hard fork to reduce the block reward by 10 extra percent (allowing budget/superblocks)
     CAmount nSuperblockPart = (nHeight >= consensusParams.nBudgetPaymentsStartBlock) ? nSubsidy/10 : 0;
@@ -1286,7 +1301,9 @@ CAmount GetMasternodePayment(int nHeight, CAmount blockValue)
 CAmount GetFounderReward(int nHeight, CAmount blockValue)
 {
         CAmount ret = 0;
-
+        // BATA BEGIN
+        return ret;
+        // BATA END
         if (nHeight >= 5) ret = blockValue * 0.01;
 
         //if (nHeight >= nEndOfFounderReward.WeDontKnowYet) ret = 0;
@@ -1808,7 +1825,7 @@ static bool WriteUndoDataForBlock(const CBlockUndo& blockundo, CValidationState&
 static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
 void ThreadScriptCheck() {
-    RenameThread("fxtc-scriptch");
+    RenameThread("bata-scriptch");
     scriptcheckqueue.Thread();
 }
 

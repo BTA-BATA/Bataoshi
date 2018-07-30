@@ -17,6 +17,10 @@
 #include <crypto/x11.h>
 #include <crypto/x16r.h>
 
+// BATA BEGIN
+#include <versionbits.h>
+// BATA END
+
 uint256 CBlockHeader::GetHash() const
 {
     return SerializeHash(*this);
@@ -25,6 +29,13 @@ uint256 CBlockHeader::GetHash() const
 uint256 CBlockHeader::GetPoWHash() const
 {
     uint256 powHash = uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+  // BATA BEGIN
+  if ((nVersion & VERSIONBITS_TOP_MASK) != VERSIONBITS_TOP_BITS)
+      scrypt_1024_1_1_256(BEGIN(nVersion), BEGIN(powHash));
+  else
+  {
+  // BATA END
 
     switch (nVersion & ALGO_VERSION_MASK)
     {
@@ -37,6 +48,9 @@ uint256 CBlockHeader::GetPoWHash() const
         default:           break; // FXTC TODO: we should not be here
     }
 
+  // BATA BEGIN
+  }
+  // BATA END
     return powHash;
 }
 

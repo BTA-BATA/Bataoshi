@@ -43,10 +43,10 @@ QString BitcoinUnits::longName(int unit)
 {
     switch(unit)
     {
-    case BTC: return QString("FxTC");
-    case mBTC: return QString("mFxTC");
-    case uBTC: return QString::fromUtf8("µFxTC (fixes)");
-    case SAT: return QString("Fixie (fixies)");
+    case BTC: return QString("BTA");
+    case mBTC: return QString("mBTA");
+    case uBTC: return QString::fromUtf8("µBTA");
+    case SAT: return QString("bat");
     default: return QString("???");
     }
 }
@@ -55,8 +55,8 @@ QString BitcoinUnits::shortName(int unit)
 {
     switch(unit)
     {
-    case uBTC: return QString::fromUtf8("fixes");
-    case SAT: return QString("fixies");
+    case uBTC: return QString::fromUtf8("Micro-Bata");
+    case SAT: return QString("bataoshi");
     default: return longName(unit);
     }
 }
@@ -65,10 +65,10 @@ QString BitcoinUnits::description(int unit)
 {
     switch(unit)
     {
-    case BTC: return QString("FxTCoins");
-    case mBTC: return QString("Milli-FxTCoins (1 / 1" THIN_SP_UTF8 "000)");
-    case uBTC: return QString("Micro-FxTCoins (fixes) (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
-    case SAT: return QString("Fixie (fixies) (1 / 100" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+    case BTC: return QString("Bata");
+    case mBTC: return QString("Milli-Bata (1 / 1" THIN_SP_UTF8 "000)");
+    case uBTC: return QString("Micro-Bata (fixes) (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+    case SAT: return QString("bat (bataoshi) (1 / 100" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
     default: return QString("???");
     }
 }

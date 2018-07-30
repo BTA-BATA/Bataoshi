@@ -1,4 +1,4 @@
-FxTC Core integration/staging tree
+Bata Core integration/staging tree
 ==================================
 
 https://fixedtradecoin.org
@@ -32,11 +32,11 @@ Build
 ----------------------
 1.  Clone the source:
 
-        git clone https://github.com/fxtc/fxtc.git
+        git clone https://github.com/bata/bata.git
 
-2.  Build FxTC Core:
+2.  Build Bata Core:
 
-    Configure and build the headless FxTC Core binaries as well as the GUI (if Qt is found).
+    Configure and build the headless Bata Core binaries as well as the GUI (if Qt is found).
 
     You can disable the GUI build by passing `--without-gui` to configure.
         

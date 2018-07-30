@@ -47,9 +47,9 @@ static const int MAX_URI_LENGTH = 255;
 /* Number of frames in spinner animation */
 #define SPINNER_FRAMES 36
 
-#define QAPP_ORG_NAME "FxTC"
+#define QAPP_ORG_NAME "Bata"
 #define QAPP_ORG_DOMAIN "fixedtradecoin.org"
-#define QAPP_APP_NAME_DEFAULT "FxTC-Qt"
-#define QAPP_APP_NAME_TESTNET "FxTC-Qt-testnet"
+#define QAPP_APP_NAME_DEFAULT "Bata-Qt"
+#define QAPP_APP_NAME_TESTNET "Bata-Qt-testnet"
 
 #endif // BITCOIN_QT_GUICONSTANTS_H

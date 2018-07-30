@@ -66,11 +66,11 @@
         <translation>Адресе за примање</translation>
     </message>
     <message>
-        <source>These are your FxTCoin addresses for sending payments. Always check the amount and the receiving address before sending coins.</source>
+        <source>These are your Bata addresses for sending payments. Always check the amount and the receiving address before sending coins.</source>
         <translation>Ово су ваше FxTCоин адресе за слање уплата. Увек добро проверите износ и адресу на коју шаљете пре него што пошаљете уплату.</translation>
     </message>
     <message>
-        <source>These are your FxTCoin addresses for receiving payments. It is recommended to use a new receiving address for each transaction.</source>
+        <source>These are your Bata addresses for receiving payments. It is recommended to use a new receiving address for each transaction.</source>
         <translation>Ово су ваше FxTCоин адресе за примање уплате. Препоручује се да се за сваку трансакцију користи нова адреса.</translation>
     </message>
     <message>
@@ -176,8 +176,8 @@
         <translation>Потврди шифрирање новчаника</translation>
     </message>
     <message>
-        <source>Warning: If you encrypt your wallet and lose your passphrase, you will &lt;b&gt;LOSE ALL OF YOUR FXTCOINS&lt;/b&gt;!</source>
-        <translation>Упозорење: Уколико шифрирате новчаник и изгубите своју лозинку, &lt;b&gt;ИЗГУБИЋЕТЕ СВЕ СВОЈЕ FXTCОИНЕ&lt;/b&gt;!</translation>
+        <source>Warning: If you encrypt your wallet and lose your passphrase, you will &lt;b&gt;LOSE ALL OF YOUR BataOINS&lt;/b&gt;!</source>
+        <translation>Упозорење: Уколико шифрирате новчаник и изгубите своју лозинку, &lt;b&gt;ИЗГУБИЋЕТЕ СВЕ СВОЈЕ BataОИНЕ&lt;/b&gt;!</translation>
     </message>
     <message>
         <source>Are you sure you wish to encrypt your wallet?</source>
@@ -188,7 +188,7 @@
         <translation>Новчаник шифриран</translation>
     </message>
     <message>
-        <source>%1 will close now to finish the encryption process. Remember that encrypting your wallet cannot fully protect your fxtcoins from being stolen by malware infecting your computer.</source>
+        <source>%1 will close now to finish the encryption process. Remember that encrypting your wallet cannot fully protect your Batas from being stolen by malware infecting your computer.</source>
         <translation>%1 ће се сада затворити како би се завршио процес шифрирања.  Запамтите да шифрирањем свог новчаника не можете у потпуности заштити своје FxTCоине од крађе од стране злоћудних програма и компјутерских инфекција.</translation>
     </message>
     <message>
@@ -358,7 +358,7 @@
         <translation>Прокси је &lt;b&gt;омогућен&lt;/b&gt;: %1</translation>
     </message>
     <message>
-        <source>Send coins to a FxTCoin address</source>
+        <source>Send coins to a Bata address</source>
         <translation>Пошаљите новац на FxTCоин адресу</translation>
     </message>
     <message>
@@ -382,7 +382,7 @@
         <translation>&amp;Верификовање поруке...</translation>
     </message>
     <message>
-        <source>FxTCoin</source>
+        <source>Bata</source>
         <translation>FxTCоин</translation>
     </message>
     <message>
@@ -410,11 +410,11 @@
         <translation>Шифрирај приватни клуљ који припада новчанику.</translation>
     </message>
     <message>
-        <source>Sign messages with your FxTCoin addresses to prove you own them</source>
+        <source>Sign messages with your Bata addresses to prove you own them</source>
         <translation>Потписуј поруку са своје FxTCоин адресе као доказ да си њихов власник</translation>
     </message>
     <message>
-        <source>Verify messages to ensure they were signed with specified FxTCoin addresses</source>
+        <source>Verify messages to ensure they were signed with specified Bata addresses</source>
         <translation>Верификуј поруке и утврди да ли су потписане од стране спецификованих FxTCоин адреса</translation>
     </message>
     <message>
@@ -434,7 +434,7 @@
         <translation>Трака са картицама</translation>
     </message>
     <message>
-        <source>Request payments (generates QR codes and fxtcoin: URIs)</source>
+        <source>Request payments (generates QR codes and Bata: URIs)</source>
         <translation>Затражи плаћање (генерише QR кодове и FxTCоин: URI-е)</translation>
     </message>
     <message>
@@ -446,7 +446,7 @@
         <translation>Прегледајте листу коришћених адреса и етикета за пријем уплата</translation>
     </message>
     <message>
-        <source>Open a fxtcoin: URI or payment request</source>
+        <source>Open a Bata: URI or payment request</source>
         <translation>Отворите FxTCоин: URI или захтев за плаћање</translation>
     </message>
     <message>
@@ -454,7 +454,7 @@
         <translation>&amp;Опције командне линије</translation>
     </message>
     <message numerus="yes">
-        <source>%n active connection(s) to FxTCoin network</source>
+        <source>%n active connection(s) to Bata network</source>
         <translation><numerusform>%n aктивна веза са FxTCоин мрежом</numerusform><numerusform>%n aктивних веза са FxTCоин мрежом</numerusform><numerusform>%n aктивних веза са FxTCоин мрежом</numerusform></translation>
     </message>
     <message>
@@ -498,7 +498,7 @@
         <translation>Ажурно</translation>
     </message>
     <message>
-        <source>Show the %1 help message to get a list with possible FxTCoin command-line options</source>
+        <source>Show the %1 help message to get a list with possible Bata command-line options</source>
         <translation>Прикажи  поруку помоћи %1 за листу са могућим опцијама FxTCоин командне линије</translation>
     </message>
     <message>
@@ -570,7 +570,7 @@
         <translation>Новчаник јс &lt;b&gt;шифрован&lt;/b&gt; и тренутно &lt;b&gt;закључан&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>A fatal error occurred. FxTCoin can no longer continue safely and will quit.</source>
+        <source>A fatal error occurred. Bata can no longer continue safely and will quit.</source>
         <translation>Дошло је до критичне грешке. FxTCоин не може безбедно да настави са радом и искључиће се.</translation>
     </message>
 </context>
@@ -826,7 +826,7 @@
         <translation>Користите прилагођени директоријум података:</translation>
     </message>
     <message>
-        <source>FxTCoin</source>
+        <source>Bata</source>
         <translation>FxTCоин</translation>
     </message>
     <message>
