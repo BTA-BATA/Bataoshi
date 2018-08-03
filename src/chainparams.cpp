@@ -139,10 +139,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000005abbb9db23febeb29a"); // block 79192
+        consensus.nMinimumChainWork = uint256S("0x000000000000000000000000000000000000000000000000024d085093e76b70"); // block 1054833
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x00000000000008372e5c5cfc4b572f64039418441c78b48d8c09e23f860d098a"); // block 79000
+        consensus.defaultAssumeValid = uint256S("0xecaf15207a7612652d3686f8d2dd95e23b6a77b9dd3fc2ac100975b7bd0de311"); // block 1000000
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -196,7 +196,7 @@ public:
 
         checkpointData = {
             {
-/*                {  10000, uint256S("0xcbadbae8bb99bce9dc5c79808bcbeee8bb8f2c579dbbdfb38df925b88baa4963")},
+                {  10000, uint256S("0xcbadbae8bb99bce9dc5c79808bcbeee8bb8f2c579dbbdfb38df925b88baa4963")},
                 {  50000, uint256S("0xcdeded5b25e5fab3b04c64c248c89daa678998e710b5699513dece49f2421061")},
                 { 100000, uint256S("0xd2847b94207e312fdc6614299646f59854e36232310a7727d1360d48ebd96c0f")},
                 { 200000, uint256S("0x342b70493e9b3a1e0c51c1e8cf76c7893cd5b9092b25b159f862829928d03d00")},
@@ -207,10 +207,11 @@ public:
                 { 550000, uint256S("0xc3e04a21969b9b7c8b058336a752829de20f60381ab421dc65d8e7dc652fe47e")},
                 { 700000, uint256S("0x3dde1aa60ab78ac29e84fa2baf641638dff95514af72e8c1dcf9fec89da84700")},
                 { 750000, uint256S("0x16f1891c3c29bbd40fc91608dec9bf8744ec14bd750f32d2f8c01dae6358b213")},
-*/            }
+                {1000000, uint256S("0xecaf15207a7612652d3686f8d2dd95e23b6a77b9dd3fc2ac100975b7bd0de311")},
+            }
         };
         // FXTC BEGIN
-        consensus.nlastValidPowHashHeight = 79000;
+        consensus.nlastValidPowHashHeight = 1000000;
         // FXTC
 
         chainTxData = ChainTxData{
@@ -344,7 +345,7 @@ public:
             }
         };
         // FXTC BEGIN
-        consensus.nlastValidPowHashHeight = 5;
+        consensus.nlastValidPowHashHeight = 1;
         // FXTC
 
         chainTxData = ChainTxData{
