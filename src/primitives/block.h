@@ -39,6 +39,9 @@ class CBlockHeader
 {
 public:
     // header
+    // BATA BEGIN
+    static const int32_t CURRENT_VERSION = 4;
+    // BATA END
     int32_t nVersion;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
@@ -65,7 +68,10 @@ public:
 
     void SetNull()
     {
-        nVersion = 0;
+        // BATA BEGIN
+        //nVersion = 0;
+        nVersion = CBlockHeader::CURRENT_VERSION;
+        // BATA END
         hashPrevBlock.SetNull();
         hashMerkleRoot.SetNull();
         nTime = 0;

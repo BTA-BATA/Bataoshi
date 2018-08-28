@@ -202,6 +202,10 @@ bool CSporkManager::IsSporkActive(int nSporkID)
 
             case SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START:   r = SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START_DEFAULT; break;
             // FXTC END
+            // BATA BEGIN
+            case SPORK_BATA_01_FXTC_CHAIN_START:                    r = SPORK_BATA_01_FXTC_CHAIN_START_DEFAULT; break;
+            case SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START:       r = SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START_DEFAULT; break;
+            // BATA END
             default:
                 LogPrint(BCLog::SPORK, "CSporkManager::IsSporkActive -- Unknown Spork ID %d\n", nSporkID);
                 r = 4070908800ULL; // 2099-1-1 i.e. off by default
@@ -245,6 +249,10 @@ int64_t CSporkManager::GetSporkValue(int nSporkID)
 
         case SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START:   return SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START_DEFAULT;
         // FXTC END
+        // BATA BEGIN
+        case SPORK_BATA_01_FXTC_CHAIN_START:                    return SPORK_BATA_01_FXTC_CHAIN_START_DEFAULT;
+        case SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START:       return SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START_DEFAULT;
+        // FXTC END
         default:
             LogPrint(BCLog::SPORK, "CSporkManager::GetSporkValue -- Unknown Spork ID %d\n", nSporkID);
             return -1;
@@ -280,6 +288,10 @@ int CSporkManager::GetSporkIDByName(std::string strName)
 
     if (strName == "SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START")   return SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START;
     // FXTC END
+    // BATA BEGIN
+    if (strName == "SPORK_BATA_01_FXTC_CHAIN_START")                    return SPORK_BATA_01_FXTC_CHAIN_START;
+    if (strName == "SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START")       return SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START;
+    // BATA END
 
     LogPrint(BCLog::SPORK, "CSporkManager::GetSporkIDByName -- Unknown Spork name '%s'\n", strName);
     return -1;
@@ -314,6 +326,10 @@ std::string CSporkManager::GetSporkNameByID(int nSporkID)
 
         case SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START:   return "SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START";
         // FXTC END
+        // BATA BEGIN
+        case SPORK_BATA_01_FXTC_CHAIN_START:                    return "SPORK_BATA_01_FXTC_CHAIN_START";
+        case SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START:       return "SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START";
+        // BATA END
         default:
             LogPrint(BCLog::SPORK, "CSporkManager::GetSporkNameByID -- Unknown Spork ID %d\n", nSporkID);
             return "Unknown";

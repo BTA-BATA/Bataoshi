@@ -58,12 +58,20 @@ unsigned int CBlockHeader::GetAlgoEfficiency(int nBlockHeight) const
 {
     switch (nVersion & ALGO_VERSION_MASK)
     {
+        // BATA BEGIN
+        //case ALGO_SHA256D: return       1;
         case ALGO_SHA256D: return       1;
-        case ALGO_SCRYPT:  return   13747;
-        case ALGO_NIST5:   return    2631;
-        case ALGO_LYRA2Z:  return 2014035;
-        case ALGO_X11:     return     477;
-        case ALGO_X16R:    return  263100;
+        //case ALGO_SCRYPT:  return   13747;
+        case ALGO_SCRYPT:  return   12984;
+        //case ALGO_NIST5:   return    2631;
+        case ALGO_NIST5:   return  298735;
+        //case ALGO_LYRA2Z:  return 2014035;
+        case ALGO_LYRA2Z:  return 1973648;
+        //case ALGO_X11:     return     477;
+        case ALGO_X11:     return     513;
+        //case ALGO_X16R:    return  263100;
+        case ALGO_X16R:    return  257849;
+        // BATA END
         default:           return       1; // FXTC TODO: we should not be here
     }
 

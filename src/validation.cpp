@@ -1239,9 +1239,7 @@ CAmount GetBlockSubsidy(int nHeight, CBlockHeader pblock, const Consensus::Param
     if (halvings >= 64)
         return 0;
 
-  // BATA BEGIN
-  // BATA TODO: add spork for multialgo start
-  if (true) { //!SPORK_FOR_MULTIALGO
+    // BATA BEGIN
     nSubsidy = 25 * COIN;
 
     if (nHeight == 1)
@@ -1255,10 +1253,16 @@ CAmount GetBlockSubsidy(int nHeight, CBlockHeader pblock, const Consensus::Param
 
     if (nHeight >= 850000)
         nSubsidy = (1 * COIN)/4 ;  //Static PoW reward of 0.25 Bata until end of PoW (10 Million Bata)
-  } else {
+
+  if (nHeight >= sporkManager.GetSporkValue(SPORK_BATA_01_FXTC_CHAIN_START)) {
+    CAmount nMaxSubsidy = nSubsidy;
+
   // BATA END
     // FXTC BEGIN
-    nSubsidy = ConvertBitsToDouble(pblock.nBits) * COIN / (49500000 / pblock.GetAlgoEfficiency(nHeight)); // dynamic block reward by algo efficiency
+    // BATA BEGIN
+    //nSubsidy = ConvertBitsToDouble(pblock.nBits) * COIN / (49500000 / pblock.GetAlgoEfficiency(nHeight)); // dynamic block reward by algo efficiency
+    nSubsidy = ConvertBitsToDouble(pblock.nBits) * COIN / (3300000 / pblock.GetAlgoEfficiency(nHeight)); // dynamic block reward by algo efficiency
+    // BATA END
     nSubsidy /= GetHandbrakeForce(pblock.nVersion, nHeight);
 
     // Subsidy is cut in half every 865,000 blocks which will occur approximately every 3 years.
@@ -1273,6 +1277,9 @@ CAmount GetBlockSubsidy(int nHeight, CBlockHeader pblock, const Consensus::Param
         nSubsidy = consensusParams.nMinimumSubsidy;
     }
     // FXTC END
+
+    if (nHeight < sporkManager.GetSporkValue(SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START) && nSubsidy > nMaxSubsidy)
+        nSubsidy = nMaxSubsidy;
   // BATA BEGIN
   }
   // BATA END
@@ -1286,6 +1293,10 @@ CAmount GetBlockSubsidy(int nHeight, CBlockHeader pblock, const Consensus::Param
 //FXTC BEGIN
 CAmount GetMasternodePayment(int nHeight, CAmount blockValue)
 {
+    // BATA BEGIN
+    return blockValue * 0.75;
+    // BATA END
+
     CAmount ret = blockValue * 0.00;
 
     int nMNPIBlock = Params().GetConsensus().nMasternodePaymentsIncreaseBlock;
@@ -1302,7 +1313,7 @@ CAmount GetFounderReward(int nHeight, CAmount blockValue)
 {
         CAmount ret = 0;
         // BATA BEGIN
-        return ret;
+        if (nHeight < sporkManager.GetSporkValue(SPORK_BATA_01_FXTC_CHAIN_START)) return ret;
         // BATA END
         if (nHeight >= 5) ret = blockValue * 0.01;
 
@@ -1834,6 +1845,8 @@ VersionBitsCache versionbitscache;
 
 int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Params& params)
 {
+    if (pindexPrev->nHeight+1 < sporkManager.GetSporkValue(SPORK_BATA_01_FXTC_CHAIN_START)) return 4;
+
     LOCK(cs_main);
     int32_t nVersion = VERSIONBITS_TOP_BITS;
 

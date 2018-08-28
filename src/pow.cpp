@@ -449,8 +449,11 @@ unsigned int GetHandbrakeForce(int32_t nVersion, int nHeight)
     // NIST5 braked and disabled
     if (nVersionAlgo == ALGO_NIST5)
     {
-        if (nHeight >= 21000) return 4070908800;
-        if (nHeight >= 19335) return 20;
+        // BATA BEGIN
+        //if (nHeight >= 21000) return 4070908800;
+        //if (nHeight >= 19335) return 20;
+        return 4070908800;
+        // BATA END
     }
 
     if (nHeight >= sporkManager.GetSporkValue(SPORK_FXTC_01_HANDBRAKE_HEIGHT))

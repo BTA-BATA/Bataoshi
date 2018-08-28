@@ -103,8 +103,8 @@ public:
         consensus.BIP16Exception = uint256();
         consensus.BIP34Height = 710000; // block 710000
         consensus.BIP34Hash = uint256S("0x41c42ea05bde6aebf76eba907f4d074e85fb9fa9a164111c49a387b4c31be1ac"); // block 710000
-        consensus.BIP65Height = 100000000; // inactive
-        consensus.BIP66Height = 100000000; // inactive
+        consensus.BIP65Height = 1000000; // block 1000000
+        consensus.BIP66Height = 1000000; // block 1000000
         // BATA END
         consensus.powLimit = uint256S("0x00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowTargetTimespan = 4 * 60 * 60; // 4 hours
@@ -166,8 +166,8 @@ public:
         // This is fine at runtime as we'll fall back to using them as a oneshot if they don't support the
         // service bits we want, but we should get them updated to support all service bits wanted by any
         // release ASAP to avoid it where possible.
-        vSeeds.emplace_back("list.batadnsseed.bata.io"); // BATA founder seeds
-        vSeeds.emplace_back("batadnsseed.midnightminer.net"); // BATA MidnightMiner seeds
+        //vSeeds.emplace_back("list.batadnsseed.bata.io"); // BATA founder seeds
+        //vSeeds.emplace_back("batadnsseed.midnightminer.net"); // BATA MidnightMiner seeds
         //vSeeds.emplace_back("seeds.on.another.domain"); // dns seeds template
 
         // BATA prefix 'B'
@@ -190,9 +190,9 @@ public:
 
         nPoolMaxTransactions = 3;
         nFulfilledRequestExpireTime = 60*60; // fulfilled requests expire in 1 hour
-        strSporkPubKey = "04491f11731dd8c8a6f6418e69d01cf35a93327971c3c207dde66b58fc2e7e5c9510b5a80a61bc4982fea1533e96f25a1319cd602e14edd1702d652cd3da367bcb";
+        strSporkPubKey = "04b04aa6945d4c96bdd7a12263ea204a1172f6ea4ebc3b0fa148375f54bb42b3657e1dfee1a90fdf6387e07ad69920523d63d6e71fb3edda3afe0e7661f2e32bbe";
 
-        founderAddress = "";
+        founderAddress = "B689SM77Pe56wJze6KPywtKkva9rhPZZUc";
 
         checkpointData = {
             {
@@ -315,8 +315,8 @@ public:
         vFixedSeeds.clear();
         vSeeds.clear();
         // nodes with support for servicebits filtering should be at the top
-        vSeeds.emplace_back("testnet-seed.bata.io");
-        vSeeds.emplace_back("testnet-bata.midnightminer.net");
+        //vSeeds.emplace_back("testnet-seed.bata.io");
+        //vSeeds.emplace_back("testnet-bata.midnightminer.net");
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
@@ -335,13 +335,13 @@ public:
 
         nPoolMaxTransactions = 3;
         nFulfilledRequestExpireTime = 5*60; // fulfilled requests expire in 5 minutes
-        strSporkPubKey = "04c7cfbb6d4e912aa67acd1ccb997425211376f480d45c1850d70ef3dbfbc6ed663429dc73b67fa8b8c8cb49dac68903929879090a34937bc2b65db6003cbbfed4";
+        strSporkPubKey = "044c2a0e685b939cc72a04988801112f359ae55a15ccd15fb547393aaca59c389cc1971b9effa04f269284a4c52c9e61c595b143714df27c3291589a313aa7ddfe";
 
         founderAddress = "";
 
         checkpointData = {
             {
-                {1, uint256S("0xc1976360739525c4ea0949fc4a1b0086284614198a0f133b1513d79c55b5466b")},
+                //{1, uint256S("0xc1976360739525c4ea0949fc4a1b0086284614198a0f133b1513d79c55b5466b")},
             }
         };
         // FXTC BEGIN

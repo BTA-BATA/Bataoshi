@@ -91,6 +91,9 @@ static UniValue GetNetworkHashPS(int lookup, int height, int32_t nAlgo) {
             workDiff = pb->nChainWorkSha256d - pb0->nChainWorkSha256d;
             break;
         case ALGO_SCRYPT:
+            // BATA BEGIN
+            if (pb->nChainWorkScrypt > 0)
+            // BATA END
             workDiff = pb->nChainWorkScrypt - pb0->nChainWorkScrypt;
             break;
         case ALGO_NIST5:

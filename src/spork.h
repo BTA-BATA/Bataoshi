@@ -30,6 +30,10 @@ static const int SPORK_END                                              = 10013;
 static const int SPORK_FXTC_START                                    = 94680010;
 static const int SPORK_FXTC_END                                      = 94680031;
 // FXTC END
+// BATA BEGIN
+static const int SPORK_BATA_START                                    = 94690010;
+static const int SPORK_BATA_END                                      = 94690020;
+// BATA END
 
 static const int SPORK_2_INSTANTSEND_ENABLED                            = 10001;
 static const int SPORK_3_INSTANTSEND_BLOCK_FILTERING                    = 10002;
@@ -57,6 +61,10 @@ static const int SPORK_FXTC_02_IGNORE_MASTERNODE_REWARD_PAYEE        = 94680025;
 
 static const int SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START     = 94680031;
 // FXTC END
+// BATA BEGIN
+static const int SPORK_BATA_01_FXTC_CHAIN_START                      = 94690010;
+static const int SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START         = 94690020;
+// BATA END
 
 static const int64_t SPORK_2_INSTANTSEND_ENABLED_DEFAULT                = 0;            // ON
 static const int64_t SPORK_3_INSTANTSEND_BLOCK_FILTERING_DEFAULT        = 0;            // ON
@@ -84,6 +92,10 @@ static const int64_t SPORK_FXTC_02_IGNORE_MASTERNODE_REWARD_PAYEE_DEFAULT   = 40
 
 static const int64_t SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START_DEFAULT  = 4070908800ULL;// OFF
 // FXTC END
+// BATA BEGIN
+static const int64_t SPORK_BATA_01_FXTC_CHAIN_START_DEFAULT                 = 4070908800ULL;// OFF
+static const int64_t SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START_DEFAULT    = 4070908800ULL;// OFF
+// BATA END
 
 extern std::map<uint256, CSporkMessage> mapSporks;
 extern CSporkManager sporkManager;
