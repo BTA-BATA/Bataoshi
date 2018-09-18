@@ -1259,10 +1259,7 @@ CAmount GetBlockSubsidy(int nHeight, CBlockHeader pblock, const Consensus::Param
 
   // BATA END
     // FXTC BEGIN
-    // BATA BEGIN
-    //nSubsidy = ConvertBitsToDouble(pblock.nBits) * COIN / (49500000 / pblock.GetAlgoEfficiency(nHeight)); // dynamic block reward by algo efficiency
-    nSubsidy = ConvertBitsToDouble(pblock.nBits) * COIN / (3300000 / pblock.GetAlgoEfficiency(nHeight)); // dynamic block reward by algo efficiency
-    // BATA END
+    nSubsidy = ConvertBitsToDouble(pblock.nBits) * COIN / (49500000 / pblock.GetAlgoEfficiency(nHeight)); // dynamic block reward by algo efficiency
     nSubsidy /= GetHandbrakeForce(pblock.nVersion, nHeight);
 
     // Subsidy is cut in half every 865,000 blocks which will occur approximately every 3 years.
