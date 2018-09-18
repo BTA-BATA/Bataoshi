@@ -208,10 +208,11 @@ public:
                 { 700000, uint256S("0x3dde1aa60ab78ac29e84fa2baf641638dff95514af72e8c1dcf9fec89da84700")},
                 { 750000, uint256S("0x16f1891c3c29bbd40fc91608dec9bf8744ec14bd750f32d2f8c01dae6358b213")},
                 {1000000, uint256S("0xecaf15207a7612652d3686f8d2dd95e23b6a77b9dd3fc2ac100975b7bd0de311")},
+                {1100000, uint256S("0x08e2973a35eecc700ebec27593a9c62f0462fd3803fcfe829055a995a5fb89b9")},
             }
         };
         // FXTC BEGIN
-        consensus.nlastValidPowHashHeight = 1000000;
+        consensus.nlastValidPowHashHeight = 1100000;
         // FXTC
 
         chainTxData = ChainTxData{

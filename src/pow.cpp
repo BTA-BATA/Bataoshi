@@ -366,8 +366,7 @@ unsigned int GetNextWorkRequiredBTC(const CBlockIndex* pindexLast, const CBlockH
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
     // BATA BEGIN
-    // BATA TODO: add spork for multialgo start
-    if (true) { // !SPORK_FOR_MULTIALGO
+    if ((pindexLast->nHeight+1) < sporkManager.GetSporkValue(SPORK_BATA_01_FXTC_CHAIN_START)) {
         return GetNextWorkRequiredBTA(pindexLast, pblock, params);
     }
     // BATA END
