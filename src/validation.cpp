@@ -1263,7 +1263,8 @@ CAmount GetBlockSubsidy(int nHeight, CBlockHeader pblock, const Consensus::Param
     nSubsidy /= GetHandbrakeForce(pblock.nVersion, nHeight);
 
     // Subsidy is cut in half every 865,000 blocks which will occur approximately every 3 years.
-    nSubsidy >>= halvings;
+    if (nHeight < sporkManager.GetSporkValue(SPORK_BATA_03_NO_SUBSIDY_HALVING_START))
+        nSubsidy >>= halvings;
 
     // Make halvings linear since start block defined in spork
     if (nHeight >= sporkManager.GetSporkValue(SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START)) {

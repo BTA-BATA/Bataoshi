@@ -205,6 +205,7 @@ bool CSporkManager::IsSporkActive(int nSporkID)
             // BATA BEGIN
             case SPORK_BATA_01_FXTC_CHAIN_START:                    r = SPORK_BATA_01_FXTC_CHAIN_START_DEFAULT; break;
             case SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START:       r = SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START_DEFAULT; break;
+            case SPORK_BATA_03_NO_SUBSIDY_HALVING_START:            r = SPORK_BATA_03_NO_SUBSIDY_HALVING_START_DEFAULT; break;
             // BATA END
             default:
                 LogPrint(BCLog::SPORK, "CSporkManager::IsSporkActive -- Unknown Spork ID %d\n", nSporkID);
@@ -252,6 +253,7 @@ int64_t CSporkManager::GetSporkValue(int nSporkID)
         // BATA BEGIN
         case SPORK_BATA_01_FXTC_CHAIN_START:                    return SPORK_BATA_01_FXTC_CHAIN_START_DEFAULT;
         case SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START:       return SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START_DEFAULT;
+        case SPORK_BATA_03_NO_SUBSIDY_HALVING_START:            return SPORK_BATA_03_NO_SUBSIDY_HALVING_START_DEFAULT;
         // FXTC END
         default:
             LogPrint(BCLog::SPORK, "CSporkManager::GetSporkValue -- Unknown Spork ID %d\n", nSporkID);
@@ -291,6 +293,7 @@ int CSporkManager::GetSporkIDByName(std::string strName)
     // BATA BEGIN
     if (strName == "SPORK_BATA_01_FXTC_CHAIN_START")                    return SPORK_BATA_01_FXTC_CHAIN_START;
     if (strName == "SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START")       return SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START;
+    if (strName == "SPORK_BATA_03_NO_SUBSIDY_HALVING_START")            return SPORK_BATA_03_NO_SUBSIDY_HALVING_START;
     // BATA END
 
     LogPrint(BCLog::SPORK, "CSporkManager::GetSporkIDByName -- Unknown Spork name '%s'\n", strName);
@@ -329,6 +332,7 @@ std::string CSporkManager::GetSporkNameByID(int nSporkID)
         // BATA BEGIN
         case SPORK_BATA_01_FXTC_CHAIN_START:                    return "SPORK_BATA_01_FXTC_CHAIN_START";
         case SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START:       return "SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START";
+        case SPORK_BATA_03_NO_SUBSIDY_HALVING_START:            return "SPORK_BATA_03_NO_SUBSIDY_HALVING_START";
         // BATA END
         default:
             LogPrint(BCLog::SPORK, "CSporkManager::GetSporkNameByID -- Unknown Spork ID %d\n", nSporkID);
