@@ -222,8 +222,11 @@ public:
             960         // * estimated number of transactions per second after that timestamp
         };
 
-        /* disable fallback fee on mainnet */
-        m_fallback_fee_enabled = false;
+        // FXTC TODO: we need to resolve fee calculation bug and disable fallback
+        ///* disable fallback fee on mainnet */
+        //m_fallback_fee_enabled = false;
+        m_fallback_fee_enabled = true;
+        //
     }
 };
 
