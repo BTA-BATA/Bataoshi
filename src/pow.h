@@ -14,10 +14,26 @@ class CBlockHeader;
 class CBlockIndex;
 class uint256;
 
+// BATA BEGIN
+// Define difficulty retarget algorithms
+enum DiffMode {
+    DIFF_DEFAULT = 0, // Default to invalid 0
+    DIFF_BTC     = 1, // Retarget every x blocks (Bitcoin style)
+    DIFF_KGW     = 2, // Retarget using Kimoto Gravity Well
+    DIFF_DGW     = 3, // Retarget using Dark Gravity Wave v3
+};
+
+unsigned int GetNextWorkRequiredBTA(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params&);
+// BATA END
+
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params&);
 unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params&);
 
 /** Check whether a block hash satisfies the proof-of-work requirement specified by nBits */
 bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&);
+
+// FXTC BEGIN
+unsigned int GetHandbrakeForce(int32_t nVersion, int nHeight);
+// FXTC END
 
 #endif // BITCOIN_POW_H

@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chain.h>
+#include <util.h>
 
 /**
  * CChain implementation
@@ -167,4 +168,36 @@ const CBlockIndex* LastCommonAncestor(const CBlockIndex* pa, const CBlockIndex* 
     // Eventually all chain branches meet at the genesis block.
     assert(pa == pb);
     return pa;
+}
+
+std::string GetAlgoName(int32_t nAlgo)
+{
+    switch (nAlgo)
+    {
+        case ALGO_SHA256D:
+            return std::string("sha256d");
+        case ALGO_SCRYPT:
+            return std::string("scrypt");
+        case ALGO_NIST5:
+            return std::string("nist5");
+        case ALGO_LYRA2Z:
+            return std::string("lyra2z");
+        case ALGO_X11:
+            return std::string("x11");
+        case ALGO_X16R:
+            return std::string("x16r");
+    }
+    return std::string("unknown");
+}
+
+int32_t GetAlgoId(std::string strAlgo)
+{
+    if (strAlgo == "sha256d")         return ALGO_SHA256D;
+    if (strAlgo == "scrypt")          return ALGO_SCRYPT;
+    if (strAlgo == "nist5")           return ALGO_NIST5;
+    if (strAlgo == "lyra2z")          return ALGO_LYRA2Z;
+    if (strAlgo == "x11")             return ALGO_X11;
+    if (strAlgo == "x16r")            return ALGO_X16R;
+
+    return miningAlgo;
 }

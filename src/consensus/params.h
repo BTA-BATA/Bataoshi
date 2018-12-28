@@ -1,11 +1,14 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2018 FXTC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_CONSENSUS_PARAMS_H
 #define BITCOIN_CONSENSUS_PARAMS_H
 
+#include <amount.h>
 #include <uint256.h>
 #include <limits>
 #include <map>
@@ -18,6 +21,12 @@ enum DeploymentPos
     DEPLOYMENT_TESTDUMMY,
     DEPLOYMENT_CSV, // Deployment of BIP68, BIP112, and BIP113.
     DEPLOYMENT_SEGWIT, // Deployment of BIP141, BIP143, and BIP147.
+
+    // Dash
+    // FXTC TODO:
+    //DEPLOYMENT_DIP0001, // Deployment of DIP0001 and lower transaction fees.
+    //
+
     // NOTE: Also add new deployments to VersionBitsDeploymentInfo in versionbits.cpp
     MAX_VERSION_BITS_DEPLOYMENTS
 };
@@ -32,6 +41,13 @@ struct BIP9Deployment {
     int64_t nStartTime;
     /** Timeout/expiry MedianTime for the deployment attempt. */
     int64_t nTimeout;
+
+    // Dash
+    /** The number of past blocks (including the block under consideration) to be taken into account for locking in a fork. */
+    int64_t nWindowSize;
+    /** A number of blocks, in the range of 1..nWindowSize, which must signal for a fork in order to lock it in. */
+    int64_t nThreshold;
+    //
 
     /** Constant for nTimeout very far in the future. */
     static constexpr int64_t NO_TIMEOUT = std::numeric_limits<int64_t>::max();
@@ -49,6 +65,28 @@ struct BIP9Deployment {
 struct Params {
     uint256 hashGenesisBlock;
     int nSubsidyHalvingInterval;
+
+    int nMasternodeMinimumConfirmations;
+    int nMasternodePaymentsStartBlock;
+    int nMasternodePaymentsIncreaseBlock;
+    int nMasternodePaymentsIncreasePeriod; // in blocks
+    int nMasternodeCollateralMinimum; // in coins
+    int nMasternodeCollateralMaximum; // in coins
+
+    int nInstantSendKeepLock; // in blocks
+
+    int nBudgetPaymentsStartBlock;
+    int nBudgetPaymentsCycleBlocks;
+    int nBudgetPaymentsWindowBlocks;
+    int nBudgetProposalEstablishingTime; // in seconds
+
+    int nSuperblockStartBlock;
+    int nSuperblockCycle; // in blocks
+
+    int nGovernanceMinQuorum; // Min absolute vote count to trigger an action
+    int nGovernanceFilterElements;
+
+    CAmount nMinimumSubsidy;
     /* Block hash that is excepted from BIP16 enforcement */
     uint256 BIP16Exception;
     /** Block height and hash at which BIP34 becomes active */
@@ -75,6 +113,9 @@ struct Params {
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
     uint256 nMinimumChainWork;
     uint256 defaultAssumeValid;
+    // FXTC BEGIN
+    int nlastValidPowHashHeight;
+    // FXTC EMD
 };
 } // namespace Consensus
 

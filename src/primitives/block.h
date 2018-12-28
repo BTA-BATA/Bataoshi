@@ -1,5 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2018 FXTC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,6 +11,22 @@
 #include <primitives/transaction.h>
 #include <serialize.h>
 #include <uint256.h>
+
+// Algo number in nVersion
+enum {
+    ALGO_VERSION_MASK    = (255 << 8),
+
+    ALGO_SHA256D         = (  0 << 8),
+    ALGO_SCRYPT          = (  1 << 8),
+    ALGO_NIST5           = (  2 << 8),
+    ALGO_LYRA2Z          = (  3 << 8),
+    ALGO_X11             = (  4 << 8),
+    ALGO_X16R            = (  5 << 8),
+
+    ALGO_NULL
+};
+
+const unsigned int ALGO_ACTIVE_COUNT = 5;
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -21,6 +39,9 @@ class CBlockHeader
 {
 public:
     // header
+    // BATA BEGIN
+    static const int32_t CURRENT_VERSION = 4;
+    // BATA END
     int32_t nVersion;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
@@ -47,7 +68,10 @@ public:
 
     void SetNull()
     {
-        nVersion = 0;
+        // BATA BEGIN
+        //nVersion = 0;
+        nVersion = CBlockHeader::CURRENT_VERSION;
+        // BATA END
         hashPrevBlock.SetNull();
         hashMerkleRoot.SetNull();
         nTime = 0;
@@ -61,6 +85,10 @@ public:
     }
 
     uint256 GetHash() const;
+
+    uint256 GetPoWHash() const;
+
+    unsigned int GetAlgoEfficiency(int nBlockHeight) const;
 
     int64_t GetBlockTime() const
     {
@@ -76,6 +104,10 @@ public:
     std::vector<CTransactionRef> vtx;
 
     // memory only
+    // Dash
+    mutable CTxOut txoutMasternode; // masternode payment
+    mutable std::vector<CTxOut> voutSuperblock; // superblock payment
+    //
     mutable bool fChecked;
 
     CBlock()
@@ -101,6 +133,8 @@ public:
     {
         CBlockHeader::SetNull();
         vtx.clear();
+        txoutMasternode = CTxOut();
+        voutSuperblock.clear();
         fChecked = false;
     }
 

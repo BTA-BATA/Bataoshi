@@ -1,13 +1,13 @@
 *.tar.gz
 
 *.exe
-src/bitcoin
-src/bitcoind
-src/bitcoin-cli
-src/bitcoin-tx
-src/test/test_bitcoin
-src/test/test_bitcoin_fuzzy
-src/qt/test/test_bitcoin-qt
+src/bata
+src/batad
+src/bata-cli
+src/bata-tx
+src/test/test_bata
+src/test/test_bata_fuzzy
+src/qt/test/test_bata-qt
 
 # autoreconf
 Makefile.in
@@ -80,13 +80,13 @@ src/qt/bitcoin-qt.includes
 # Compilation and Qt preprocessor part
 *.qm
 Makefile
-bitcoin-qt
-Bitcoin-Qt.app
+bata-qt
+Bata-Qt.app
 background.tiff*
 
 # Unit-tests
 Makefile.test
-bitcoin-qt_test
+bata-qt_test
 
 # Resources cpp
 qrc_*.cpp
@@ -99,7 +99,7 @@ build
 *.gcno
 *.gcda
 /*.info
-test_bitcoin.coverage/
+test_bata.coverage/
 total.coverage/
 coverage_percent.txt
 

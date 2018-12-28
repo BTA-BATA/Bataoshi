@@ -1,5 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2018 FXTC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +19,9 @@
 #include <cuckoocache.h>
 #include <hash.h>
 #include <index/txindex.h>
+// FXTC BEGIN
+#include <key_io.h>
+// FXTC END
 #include <policy/fees.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
@@ -41,6 +46,9 @@
 #include <validationinterface.h>
 #include <warnings.h>
 
+#include <masternodeman.h>
+#include <masternode-payments.h>
+
 #include <future>
 #include <sstream>
 
@@ -48,7 +56,7 @@
 #include <boost/thread.hpp>
 
 #if defined(NDEBUG)
-# error "Bitcoin cannot be compiled without assertions."
+# error "Bata cannot be compiled without assertions."
 #endif
 
 #define MICRO 0.000001
@@ -188,6 +196,11 @@ public:
 
     void UnloadBlockIndex();
 
+    // Dash
+    bool DisconnectBlocks(int blocks);
+    void ReprocessBlocks(int nBlocks);
+    //
+
 private:
     bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace);
     bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool);
@@ -234,6 +247,11 @@ uint64_t nPruneTarget = 0;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 
+// FXTC TODO:
+// Dash
+//std::atomic<bool> fDIP0001ActiveAtTip{false};
+//
+
 uint256 hashAssumeValid;
 arith_uint256 nMinimumChainWork;
 
@@ -244,10 +262,14 @@ CBlockPolicyEstimator feeEstimator;
 CTxMemPool mempool(&feeEstimator);
 std::atomic_bool g_is_mempool_loaded{false};
 
+// Dash
+map<uint256, int64_t> mapRejectedBlocks GUARDED_BY(cs_main);
+//
+
 /** Constant stuff for coinbase transactions we create: */
 CScript COINBASE_FLAGS;
 
-const std::string strMessageMagic = "Bitcoin Signed Message:\n";
+const std::string strMessageMagic = "Bata Signed Message:\n";
 
 // Internal stuff
 namespace {
@@ -556,6 +578,33 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, CValidationSt
 
     return CheckInputs(tx, state, view, true, flags, cacheSigStore, true, txdata);
 }
+
+// Dash
+bool GetUTXOCoin(const COutPoint& outpoint, Coin& coin)
+{
+    LOCK(cs_main);
+    if (!pcoinsTip->GetCoin(outpoint, coin))
+        return false;
+    if (coin.IsSpent())
+        return false;
+    return true;
+}
+
+int GetUTXOHeight(const COutPoint& outpoint)
+{
+    // -1 means UTXO is yet unknown or already spent
+    Coin coin;
+    return GetUTXOCoin(outpoint, coin) ? coin.nHeight : -1;
+}
+
+int GetUTXOConfirmations(const COutPoint& outpoint)
+{
+    // -1 means UTXO is yet unknown or already spent
+    LOCK(cs_main);
+    int nPrevoutHeight = GetUTXOHeight(outpoint);
+    return (nPrevoutHeight > -1 && chainActive.Tip()) ? chainActive.Height() - nPrevoutHeight + 1 : -1;
+}
+//
 
 static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool& pool, CValidationState& state, const CTransactionRef& ptx,
                               bool* pfMissingInputs, int64_t nAcceptTime, std::list<CTransactionRef>* plTxnReplaced,
@@ -1091,7 +1140,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Check the header
-    if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+    if (!CheckProofOfWork(block.GetPoWHash(), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
     return true;
@@ -1159,18 +1208,118 @@ bool ReadRawBlockFromDisk(std::vector<uint8_t>& block, const CBlockIndex* pindex
     return ReadRawBlockFromDisk(block, block_pos, message_start);
 }
 
-CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
+//FXTC BEGIN
+double ConvertBitsToDouble(unsigned int nBits)
 {
+    int nShift = (nBits >> 24) & 0xff;
+
+    double dDiff = (double)0x0000ffff / (double)(nBits & 0x00ffffff);
+
+    while (nShift < 29)
+    {
+        dDiff *= 256.0;
+        nShift++;
+    }
+    while (nShift > 29)
+    {
+        dDiff /= 256.0;
+        nShift--;
+    }
+
+    return dDiff;
+}
+//FXTC END
+
+CAmount GetBlockSubsidy(int nHeight, CBlockHeader pblock, const Consensus::Params& consensusParams, bool fSuperblockPartOnly)
+{
+    CAmount nSubsidy = 0;
+
     int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
     // Force block reward to zero when right shift is undefined.
     if (halvings >= 64)
         return 0;
 
-    CAmount nSubsidy = 50 * COIN;
-    // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
+    // BATA BEGIN
+    nSubsidy = 25 * COIN;
+
+    if (nHeight == 1)
+        nSubsidy = 88 * COIN;
+
+    if (nHeight == 2)
+        nSubsidy = 1 * COIN;
+
+    // Subsidy is cut in half every 865,000 blocks which will occur approximately every 3 years.
     nSubsidy >>= halvings;
-    return nSubsidy;
+
+    if (nHeight >= 850000)
+        nSubsidy = (1 * COIN)/4 ;  //Static PoW reward of 0.25 Bata until end of PoW (10 Million Bata)
+
+  if (nHeight >= sporkManager.GetSporkValue(SPORK_BATA_01_FXTC_CHAIN_START)) {
+    CAmount nMaxSubsidy = nSubsidy;
+
+  // BATA END
+    // FXTC BEGIN
+    nSubsidy = ConvertBitsToDouble(pblock.nBits) * COIN / (49500000 / pblock.GetAlgoEfficiency(nHeight)); // dynamic block reward by algo efficiency
+    nSubsidy /= GetHandbrakeForce(pblock.nVersion, nHeight);
+
+    // Subsidy is cut in half every 865,000 blocks which will occur approximately every 3 years.
+    if (nHeight < sporkManager.GetSporkValue(SPORK_BATA_03_NO_SUBSIDY_HALVING_START))
+        nSubsidy >>= halvings;
+
+    // Make halvings linear since start block defined in spork
+    if (nHeight >= sporkManager.GetSporkValue(SPORK_FXTC_03_BLOCK_REWARD_SMOOTH_HALVING_START)) {
+        nSubsidy -= ((nSubsidy >> 1) * (nHeight % consensusParams.nSubsidyHalvingInterval)) / consensusParams.nSubsidyHalvingInterval;
+    }
+    // Force minimum subsidy allowed
+    if (nSubsidy < consensusParams.nMinimumSubsidy) {
+        nSubsidy = consensusParams.nMinimumSubsidy;
+    }
+    // FXTC END
+
+    if (nHeight < sporkManager.GetSporkValue(SPORK_BATA_02_UNLIMITED_BLOCK_SUBSIDY_START) && nSubsidy > nMaxSubsidy)
+        nSubsidy = nMaxSubsidy;
+  // BATA BEGIN
+  }
+  // BATA END
+
+    // Hard fork to reduce the block reward by 10 extra percent (allowing budget/superblocks)
+    CAmount nSuperblockPart = (nHeight >= consensusParams.nBudgetPaymentsStartBlock) ? nSubsidy/10 : 0;
+
+    return fSuperblockPartOnly ? nSuperblockPart : nSubsidy - nSuperblockPart;
 }
+
+//FXTC BEGIN
+CAmount GetMasternodePayment(int nHeight, CAmount blockValue)
+{
+    // BATA BEGIN
+    return blockValue * 0.75;
+    // BATA END
+
+    CAmount ret = blockValue * 0.00;
+
+    int nMNPIBlock = Params().GetConsensus().nMasternodePaymentsIncreaseBlock;
+    int nMNPIPeriod = Params().GetConsensus().nMasternodePaymentsIncreasePeriod;
+
+    // Doubled initial reward as compensation for blockchain restart
+    //if(nHeight >= nMNPIBlock) ret = (0.25 - 0.24 * (100.00 * nMNPIPeriod / (1.00 * nHeight + 100.00 * nMNPIPeriod ))) * blockValue; // Increase smoothly from 1% up to 25% in infinity
+    if(nHeight >= nMNPIBlock) ret = (0.25 - 0.23 * (100.00 * nMNPIPeriod / (1.00 * nHeight + 100.00 * nMNPIPeriod ))) * blockValue; // Increase smoothly from 2% up to 25% in infinity
+
+    return ret;
+}
+
+CAmount GetFounderReward(int nHeight, CAmount blockValue)
+{
+        CAmount ret = 0;
+        // BATA BEGIN
+        if (nHeight < sporkManager.GetSporkValue(SPORK_BATA_01_FXTC_CHAIN_START)) return ret;
+        // BATA END
+        if (nHeight >= 5) ret = blockValue * 0.01;
+
+        //if (nHeight >= nEndOfFounderReward.WeDontKnowYet) ret = 0;
+
+        return ret;
+}
+//FXTC END
 
 bool IsInitialBlockDownload()
 {
@@ -1685,7 +1834,7 @@ static bool WriteUndoDataForBlock(const CBlockUndo& blockundo, CValidationState&
 static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
 void ThreadScriptCheck() {
-    RenameThread("bitcoin-scriptch");
+    RenameThread("bata-scriptch");
     scriptcheckqueue.Thread();
 }
 
@@ -1694,6 +1843,8 @@ VersionBitsCache versionbitscache;
 
 int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Params& params)
 {
+    if (pindexPrev->nHeight+1 < sporkManager.GetSporkValue(SPORK_BATA_01_FXTC_CHAIN_START)) return 4;
+
     LOCK(cs_main);
     int32_t nVersion = VERSIONBITS_TOP_BITS;
 
@@ -1704,7 +1855,20 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
         }
     }
 
+    // encode algo into nVersion
+    nVersion |= miningAlgo;
+
     return nVersion;
+}
+
+bool GetBlockHash(uint256& hashRet, int nBlockHeight)
+{
+    LOCK(cs_main);
+    if(chainActive.Tip() == NULL) return false;
+    if(nBlockHeight < -1 || nBlockHeight > chainActive.Height()) return false;
+    if(nBlockHeight == -1) nBlockHeight = chainActive.Height();
+    hashRet = chainActive[nBlockHeight]->GetBlockHash();
+    return true;
 }
 
 /**
@@ -2050,12 +2214,57 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
-    CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
-    if (block.vtx[0]->GetValueOut() > blockReward)
+    CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, pindex->GetBlockHeader(), chainparams.GetConsensus());
+    if (block.vtx[0]->GetValueOut() > blockReward * (!sporkManager.IsSporkActive(SPORK_FXTC_02_IGNORE_SLIGHTLY_HIGHER_COINBASE) ? 1 : 2))
         return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
                                block.vtx[0]->GetValueOut(), blockReward),
                                REJECT_INVALID, "bad-cb-amount");
+
+    // FXTC BEGIN
+    CAmount founderReward = GetFounderReward(pindex->nHeight, block.vtx[0]->GetValueOut());
+    if (!sporkManager.IsSporkActive(SPORK_FXTC_02_IGNORE_FOUNDER_REWARD_CHECK) && founderReward > 0) {
+        CTxDestination destination = DecodeDestination(Params().FounderAddress());
+        if (IsValidDestination(destination)) {
+            CScript FOUNDER_SCRIPT = GetScriptForDestination(destination);
+            bool FounderPaid = false;
+
+            for (const auto& output : block.vtx[0]->vout) {
+                if (output.scriptPubKey == FOUNDER_SCRIPT && ((output.nValue == founderReward) || sporkManager.IsSporkActive(SPORK_FXTC_02_IGNORE_FOUNDER_REWARD_VALUE))) {
+                    FounderPaid = true;
+                    break;
+                }
+            }
+            if (!FounderPaid) {
+                return state.DoS(0, error("ConnectBlock(INFINEX): no founder reward"), REJECT_INVALID, "no-founder-reward");
+            }
+        } else {
+            return state.DoS(0, error("ConnectBlock(INFINEX): invalid founder reward destination"), REJECT_INVALID, "invalid-founder-reward-destination");
+        }
+    }
+
+    // FXTC END
+
+    // DASH : MODIFIED TO CHECK MASTERNODE PAYMENTS AND SUPERBLOCKS
+
+    // It's possible that we simply don't have enough data and this could fail
+    // (i.e. block itself could be a correct one and we need to store it),
+    // that's why this is in ConnectBlock. Could be the other way around however -
+    // the peer who sent us this block is missing some data and wasn't able
+    // to recognize that block is actually invalid.
+    // TODO: resync data (both ways?) and try to reprocess this block later.
+    //CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, pindex->GetBlockHeader(), chainparams.GetConsensus());
+    std::string strError = "";
+    if (!sporkManager.IsSporkActive(SPORK_FXTC_02_IGNORE_MASTERNODE_REWARD_VALUE) && !IsBlockValueValid(block, pindex->nHeight, block.vtx[0]->GetValueOut(), strError)) {
+        return state.DoS(0, error("ConnectBlock(DASH): %s", strError), REJECT_INVALID, "bad-cb-amount");
+    }
+
+    if (!sporkManager.IsSporkActive(SPORK_FXTC_02_IGNORE_MASTERNODE_REWARD_PAYEE) && !IsBlockPayeeValid(block.vtx[0], pindex->nHeight, block.vtx[0]->GetValueOut(), pindex->GetBlockHeader())) {
+        mapRejectedBlocks.insert(make_pair(block.GetHash(), GetTime()));
+        return state.DoS(0, error("ConnectBlock(DASH): couldn't find masternode or superblock payments"),
+                                REJECT_INVALID, "bad-cb-payee");
+    }
+    // END DASH
 
     if (!control.Wait())
         return state.DoS(100, error("%s: CheckQueue failed", __func__), REJECT_INVALID, "block-validation-failed");
@@ -2245,7 +2454,10 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
     }
 
     std::string warningMessages;
-    if (!IsInitialBlockDownload())
+    // BATA BEGIN
+    //if (!IsInitialBlockDownload())
+    if (false)
+    // BATA END
     {
         int nUpgraded = 0;
         const CBlockIndex* pindex = pindexNew;
@@ -2265,7 +2477,7 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
         for (int i = 0; i < 100 && pindex != nullptr; i++)
         {
             int32_t nExpectedVersion = ComputeBlockVersion(pindex->pprev, chainParams.GetConsensus());
-            if (pindex->nVersion > VERSIONBITS_LAST_OLD_BLOCK_VERSION && (pindex->nVersion & ~nExpectedVersion) != 0)
+            if ((pindex->nVersion & ~ALGO_VERSION_MASK) > VERSIONBITS_LAST_OLD_BLOCK_VERSION && (pindex->nVersion & ~nExpectedVersion & ~ALGO_VERSION_MASK) != 0)
                 ++nUpgraded;
             pindex = pindex->pprev;
         }
@@ -2476,6 +2688,56 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
     connectTrace.BlockConnected(pindexNew, std::move(pthisBlock));
     return true;
 }
+
+// Dash
+bool CChainState::DisconnectBlocks(int blocks)
+{
+    LOCK(cs_main);
+
+    CValidationState state;
+
+    LogPrintf("DisconnectBlocks -- Got command to replay %d blocks\n", blocks);
+    for(int i = 0; i < blocks; i++) {
+        if(!DisconnectTip(state, Params(), nullptr) || !state.IsValid()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void CChainState::ReprocessBlocks(int nBlocks)
+{
+    LOCK(cs_main);
+
+    std::map<uint256, int64_t>::iterator it = mapRejectedBlocks.begin();
+    while(it != mapRejectedBlocks.end()){
+        //use a window twice as large as is usual for the nBlocks we want to reset
+        if((*it).second  > GetTime() - (nBlocks*60*5)) {
+            BlockMap::iterator mi = mapBlockIndex.find((*it).first);
+            if (mi != mapBlockIndex.end() && (*mi).second) {
+
+                CBlockIndex* pindex = (*mi).second;
+                LogPrintf("ReprocessBlocks -- %s\n", (*it).first.ToString());
+
+                ResetBlockFailureFlags(pindex);
+            }
+        }
+        ++it;
+    }
+
+    DisconnectBlocks(nBlocks);
+
+    CValidationState state;
+    ActivateBestChain(state, Params(), std::shared_ptr<const CBlock>());
+}
+
+void ReprocessBlocks(int nBlocks)
+{
+    return g_chainstate.ReprocessBlocks(nBlocks);
+}
+
+//
 
 /**
  * Return the tip of the chain with the most work in it, that isn't
@@ -2932,6 +3194,14 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
     }
     pindexNew->nTimeMax = (pindexNew->pprev ? std::max(pindexNew->pprev->nTimeMax, pindexNew->nTime) : pindexNew->nTime);
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
+    // FXTC BEGIN
+    pindexNew->nChainWorkSha256d = (pindexNew->pprev ? pindexNew->pprev->nChainWorkSha256d : 0) + (((pindexNew->nVersion & ALGO_VERSION_MASK) == ALGO_SHA256D) ? GetBlockProof(*pindexNew) : 0);
+    pindexNew->nChainWorkScrypt = (pindexNew->pprev ? pindexNew->pprev->nChainWorkScrypt : 0) + (((pindexNew->nVersion & ALGO_VERSION_MASK) == ALGO_SCRYPT) ? GetBlockProof(*pindexNew) : 0);
+    pindexNew->nChainWorkNist5 = (pindexNew->pprev ? pindexNew->pprev->nChainWorkNist5 : 0) + (((pindexNew->nVersion & ALGO_VERSION_MASK) == ALGO_NIST5) ? GetBlockProof(*pindexNew) : 0);
+    pindexNew->nChainWorkLyra2Z = (pindexNew->pprev ? pindexNew->pprev->nChainWorkLyra2Z : 0) + (((pindexNew->nVersion & ALGO_VERSION_MASK) == ALGO_LYRA2Z) ? GetBlockProof(*pindexNew) : 0);
+    pindexNew->nChainWorkX11 = (pindexNew->pprev ? pindexNew->pprev->nChainWorkX11 : 0) + (((pindexNew->nVersion & ALGO_VERSION_MASK) == ALGO_X11) ? GetBlockProof(*pindexNew) : 0);
+    pindexNew->nChainWorkX16R = (pindexNew->pprev ? pindexNew->pprev->nChainWorkX16R : 0) + (((pindexNew->nVersion & ALGO_VERSION_MASK) == ALGO_X16R) ? GetBlockProof(*pindexNew) : 0);
+    // FXTC END
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
     if (pindexBestHeader == nullptr || pindexBestHeader->nChainWork < pindexNew->nChainWork)
         pindexBestHeader = pindexNew;
@@ -3079,7 +3349,7 @@ static bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, 
 static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true)
 {
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+    if (fCheckPOW && !CheckProofOfWork(block.GetPoWHash(), block.nBits, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
     return true;
@@ -3380,6 +3650,10 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
         pindexPrev = (*mi).second;
         if (pindexPrev->nStatus & BLOCK_FAILED_MASK)
             return state.DoS(100, error("%s: prev block invalid", __func__), REJECT_INVALID, "bad-prevblk");
+        // FXTC BEGIN
+        if (fCheckpointsEnabled && pindexPrev->nHeight < chainparams.GetConsensus().nlastValidPowHashHeight &&  !Checkpoints::IsExpectedCheckpoint(chainparams.Checkpoints(), pindexPrev->nHeight + 1, block.GetHash()))
+            return state.DoS(100, error("%s: Checkpoints::IsExpectedCheckpoint(): invalid checkpoint at height %d", __func__, pindexPrev->nHeight + 1), REJECT_CHECKPOINT, "bad-chackpoint");
+        // FXTC END
         if (!ContextualCheckBlockHeader(block, state, chainparams, pindexPrev, GetAdjustedTime()))
             return error("%s: Consensus::ContextualCheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
 
@@ -3842,6 +4116,14 @@ bool CChainState::LoadBlockIndex(const Consensus::Params& consensus_params, CBlo
     {
         CBlockIndex* pindex = item.second;
         pindex->nChainWork = (pindex->pprev ? pindex->pprev->nChainWork : 0) + GetBlockProof(*pindex);
+        // FXTC BEGIN
+        pindex->nChainWorkSha256d = (pindex->pprev ? pindex->pprev->nChainWorkSha256d : 0) + (((pindex->nVersion & ALGO_VERSION_MASK) == ALGO_SHA256D) ? GetBlockProof(*pindex) : 0);
+        pindex->nChainWorkScrypt = (pindex->pprev ? pindex->pprev->nChainWorkScrypt : 0) + (((pindex->nVersion & ALGO_VERSION_MASK) == ALGO_SCRYPT) ? GetBlockProof(*pindex) : 0);
+        pindex->nChainWorkNist5 = (pindex->pprev ? pindex->pprev->nChainWorkNist5 : 0) + (((pindex->nVersion & ALGO_VERSION_MASK) == ALGO_NIST5) ? GetBlockProof(*pindex) : 0);
+        pindex->nChainWorkLyra2Z = (pindex->pprev ? pindex->pprev->nChainWorkLyra2Z : 0) + (((pindex->nVersion & ALGO_VERSION_MASK) == ALGO_LYRA2Z) ? GetBlockProof(*pindex) : 0);
+        pindex->nChainWorkX11 = (pindex->pprev ? pindex->pprev->nChainWorkX11 : 0) + (((pindex->nVersion & ALGO_VERSION_MASK) == ALGO_X11) ? GetBlockProof(*pindex) : 0);
+        pindex->nChainWorkX16R = (pindex->pprev ? pindex->pprev->nChainWorkX16R : 0) + (((pindex->nVersion & ALGO_VERSION_MASK) == ALGO_X16R) ? GetBlockProof(*pindex) : 0);
+        // FXTC END
         pindex->nTimeMax = (pindex->pprev ? std::max(pindex->pprev->nTimeMax, pindex->nTime) : pindex->nTime);
         // We can link the chain of blocks for which we've received transactions at some point.
         // Pruned nodes may have deleted the block.

@@ -1,5 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2018 FXTC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -21,6 +23,7 @@
 #include <httprpc.h>
 #include <index/txindex.h>
 #include <key.h>
+#include <key_io.h>
 #include <validation.h>
 #include <miner.h>
 #include <netbase.h>
@@ -48,6 +51,33 @@
 #include <walletinitinterface.h>
 #include <stdint.h>
 #include <stdio.h>
+
+// FXTC BEGIN
+// Dasg
+#include "activemasternode.h"
+#include "dsnotificationinterface.h"
+#include "flat-database.h"
+#include "governance.h"
+#include "instantx.h"
+#ifdef ENABLE_WALLET
+#include "keepass.h"
+#endif
+#include "masternode-payments.h"
+#include "masternode-sync.h"
+#include "masternodeman.h"
+#include "masternodeconfig.h"
+#include "messagesigner.h"
+#include "netfulfilledman.h"
+#ifdef ENABLE_WALLET
+#include "privatesend-client.h"
+#endif // ENABLE_WALLET
+#include "privatesend-server.h"
+#include "spork.h"
+// Pivx
+#include "sporkdb.h"
+//
+//
+// FXTC END
 
 #ifndef WIN32
 #include <signal.h>
@@ -101,6 +131,8 @@ void DummyWalletInit::AddWalletOptions() const
 const WalletInitInterface& g_wallet_init_interface = DummyWalletInit();
 #endif
 
+static CDSNotificationInterface* pdsNotificationInterface = NULL;
+
 #ifdef WIN32
 // Win32 LevelDB doesn't use filedescriptors, and the ones used for
 // accessing block files don't count towards the fd_set size limit
@@ -140,7 +172,7 @@ static const char* FEE_ESTIMATES_FILENAME="fee_estimates.dat";
 /**
  * This is a minimally invasive approach to shutdown on LevelDB read errors from the
  * chainstate, while keeping user interface out of the common library, which is shared
- * between bitcoind, and bitcoin-qt and non-server tools.
+ * between fxtcoind, and fxtcoin-qt and non-server tools.
 */
 class CCoinsViewErrorCatcher final : public CCoinsViewBacked
 {
@@ -195,7 +227,7 @@ void Shutdown()
     /// for example if the data directory was found to be locked.
     /// Be sure that anything that writes files or flushes caches only does this if the respective
     /// module was initialized.
-    RenameThread("bitcoin-shutoff");
+    RenameThread("bata-shutoff");
     mempool.AddTransactionsUpdated(1);
 
     StopHTTPRPC();
@@ -227,6 +259,18 @@ void Shutdown()
     if (g_is_mempool_loaded && gArgs.GetArg("-persistmempool", DEFAULT_PERSIST_MEMPOOL)) {
         DumpMempool();
     }
+
+    // Dash
+    // STORE DATA CACHES INTO SERIALIZED DAT FILES
+    CFlatDB<CMasternodeMan> flatdb1("mncache.dat", "magicMasternodeCache");
+    flatdb1.Dump(mnodeman);
+    CFlatDB<CMasternodePayments> flatdb2("mnpayments.dat", "magicMasternodePaymentsCache");
+    flatdb2.Dump(mnpayments);
+    CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
+    flatdb3.Dump(governance);
+    CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
+    flatdb4.Dump(netfulfilledman);
+    //
 
     if (fFeeEstimatesInitialized)
     {
@@ -264,6 +308,9 @@ void Shutdown()
         pcoinscatcher.reset();
         pcoinsdbview.reset();
         pblocktree.reset();
+        // FXTC START
+        pSporkDB.reset();
+        // FXTC END
     }
     g_wallet_init_interface.Stop();
 
@@ -274,6 +321,12 @@ void Shutdown()
         g_zmq_notification_interface = nullptr;
     }
 #endif
+
+    if (pdsNotificationInterface) {
+        UnregisterValidationInterface(pdsNotificationInterface);
+        delete pdsNotificationInterface;
+        pdsNotificationInterface = NULL;
+    }
 
 #ifndef WIN32
     try {
@@ -500,6 +553,12 @@ void SetupServerArgs()
     gArgs.AddArg("-blockmaxweight=<n>", strprintf("Set maximum BIP141 block weight (default: %d)", DEFAULT_BLOCK_MAX_WEIGHT), false, OptionsCategory::BLOCK_CREATION);
     gArgs.AddArg("-blockmintxfee=<amt>", strprintf("Set lowest fee rate (in %s/kB) for transactions to be included in block creation. (default: %s)", CURRENCY_UNIT, FormatMoney(DEFAULT_BLOCK_MIN_TX_FEE)), false, OptionsCategory::BLOCK_CREATION);
     gArgs.AddArg("-blockversion=<n>", "Override block version to test forking scenarios", true, OptionsCategory::BLOCK_CREATION);
+    // FXTC BEGIN
+    // BATA BEGIN
+    //gArgs.AddArg("-algo=<algo>", strprintf("Mining algorithm: sha256d, scrypt, lyra2z, x11, x16r (default: sha256)"), false, OptionsCategory::BLOCK_CREATION);
+    gArgs.AddArg("-algo=<algo>", strprintf("Mining algorithm: sha256d, scrypt, lyra2z, x11, x16r (default: scrypt)"), false, OptionsCategory::BLOCK_CREATION);
+    // BATA END
+    // FXTC END
 
     gArgs.AddArg("-rest", strprintf("Accept public REST requests (default: %u)", DEFAULT_REST_ENABLE), false, OptionsCategory::RPC);
     gArgs.AddArg("-rpcallowip=<ip>", "Allow JSON-RPC connections from specified source. Valid for <ip> are a single IP (e.g. 1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. 1.2.3.4/24). This option can be specified multiple times", false, OptionsCategory::RPC);
@@ -527,8 +586,8 @@ void SetupServerArgs()
 
 std::string LicenseInfo()
 {
-    const std::string URL_SOURCE_CODE = "<https://github.com/bitcoin/bitcoin>";
-    const std::string URL_WEBSITE = "<https://bitcoincore.org>";
+    const std::string URL_SOURCE_CODE = "<https://github.com/bata/bata>";
+    const std::string URL_WEBSITE = "<https://fixedtradecoin.org>";
 
     return CopyrightHolders(strprintf(_("Copyright (C) %i-%i"), 2009, COPYRIGHT_YEAR) + " ") + "\n" +
            "\n" +
@@ -633,7 +692,7 @@ static void CleanupBlockRevFiles()
 static void ThreadImport(std::vector<fs::path> vImportFiles)
 {
     const CChainParams& chainparams = Params();
-    RenameThread("bitcoin-loadblk");
+    RenameThread("bata-loadblk");
     ScheduleBatchPriority();
 
     {
@@ -706,7 +765,7 @@ static void ThreadImport(std::vector<fs::path> vImportFiles)
 }
 
 /** Sanity checks
- *  Ensure that Bitcoin is running in a usable environment with all
+ *  Ensure that FxTCoin is running in a usable environment with all
  *  necessary library support.
  */
 static bool InitSanityCheck(void)
@@ -1172,12 +1231,36 @@ bool AppInitParameterInteraction()
             }
         }
     }
+
+    // FXTC BEGIN
+    // algo switch
+    // BATA BEGIN
+    //std::string strAlgo = gArgs.GetArg("-algo","sha256");
+    std::string strAlgo = gArgs.GetArg("-algo","scrypt");
+    // BATA END
+    transform(strAlgo.begin(), strAlgo.end(), strAlgo.begin(), ::tolower);
+    if (strAlgo == "sha256d")
+         miningAlgo = ALGO_SHA256D;
+    else if (strAlgo == "scrypt")
+         miningAlgo = ALGO_SCRYPT;
+    else if (strAlgo == "nist5")
+         miningAlgo = ALGO_NIST5;
+    else if (strAlgo == "lyra2z")
+         miningAlgo = ALGO_LYRA2Z;
+    else if (strAlgo == "x11")
+         miningAlgo = ALGO_X11;
+    else if (strAlgo == "x16r")
+         miningAlgo = ALGO_X16R;
+    else
+         miningAlgo = ALGO_SCRYPT; // FXTC TODO: we should not be here
+    // FXTC END
+
     return true;
 }
 
 static bool LockDataDirectory(bool probeOnly)
 {
-    // Make sure only a single Bitcoin process is using the data directory.
+    // Make sure only a single FxTCoin process is using the data directory.
     fs::path datadir = GetDataDir();
     if (!DirIsWritable(datadir)) {
         return InitError(strprintf(_("Cannot write to data directory '%s'; check permissions."), datadir.string()));
@@ -1250,9 +1333,9 @@ bool AppInitMain()
     // Warn about relative -datadir path.
     if (gArgs.IsArgSet("-datadir") && !fs::path(gArgs.GetArg("-datadir", "")).is_absolute()) {
         LogPrintf("Warning: relative datadir option '%s' specified, which will be interpreted relative to the " /* Continued */
-                  "current working directory '%s'. This is fragile, because if bitcoin is started in the future "
+                  "current working directory '%s'. This is fragile, because if Bata is started in the future "
                   "from a different location, it will be unable to locate the current data files. There could "
-                  "also be data loss if bitcoin is started while in a temporary directory.\n",
+                  "also be data loss if Bata is started while in a temporary directory.\n",
             gArgs.GetArg("-datadir", ""), fs::current_path().string());
     }
 
@@ -1264,6 +1347,14 @@ bool AppInitMain()
         for (int i=0; i<nScriptCheckThreads-1; i++)
             threadGroup.create_thread(&ThreadScriptCheck);
     }
+
+    // Dash
+    if (gArgs.IsArgSet("-sporkkey")) // spork priv key
+    {
+        if (!sporkManager.SetPrivKey(gArgs.GetArg("-sporkkey", "")))
+            return InitError(_("Unable to sign spork message, wrong key?"));
+    }
+    //
 
     // Start the lightweight task scheduler thread
     CScheduler::Function serviceLoop = boost::bind(&CScheduler::serviceQueue, &scheduler);
@@ -1405,6 +1496,9 @@ bool AppInitMain()
     uint64_t nMaxOutboundLimit = 0; //unlimited unless -maxuploadtarget is set
     uint64_t nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
 
+    pdsNotificationInterface = new CDSNotificationInterface(connman);
+    RegisterValidationInterface(pdsNotificationInterface);
+
     if (gArgs.IsArgSet("-maxuploadtarget")) {
         nMaxOutboundLimit = gArgs.GetArg("-maxuploadtarget", DEFAULT_MAX_UPLOAD_TARGET)*1024*1024;
     }
@@ -1455,6 +1549,10 @@ bool AppInitMain()
                 // fails if it's still open from the previous loop. Close it first:
                 pblocktree.reset();
                 pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReset));
+                // FXTC BEGIN
+                pSporkDB.reset();
+                pSporkDB.reset(new CSporkDB(0, false, false));
+                // FXTC END
 
                 if (fReset) {
                     pblocktree->WriteReindexing(true);
@@ -1462,6 +1560,12 @@ bool AppInitMain()
                     if (fPruneMode)
                         CleanupBlockRevFiles();
                 }
+
+                // FXTC BEGIN
+                uiInterface.InitMessage(_("Loading sporks..."));
+                sporkManager.LoadSporksFromDB();
+                uiInterface.InitMessage(_("Loading block index..."));
+                // FXTC END
 
                 if (ShutdownRequested()) break;
 
@@ -1675,6 +1779,144 @@ bool AppInitMain()
     if (ShutdownRequested()) {
         return false;
     }
+
+    // Dash
+    // ********************************************************* Step 11a: setup PrivateSend
+    fMasterNode = gArgs.GetBoolArg("-masternode", false);
+    // TODO: masternode should have no wallet
+
+    if((fMasterNode || masternodeConfig.getCount() > -1) && gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX) == false) {
+        return InitError("Enabling Masternode support requires turning on transaction indexing."
+                  "Please add txindex=1 to your configuration and start with -reindex");
+    }
+
+    if(fMasterNode) {
+        LogPrintf("MASTERNODE:\n");
+
+        std::string strMasterNodePrivKey = gArgs.GetArg("-masternodeprivkey", "");
+        if(!strMasterNodePrivKey.empty()) {
+            if(!CMessageSigner::GetKeysFromSecret(strMasterNodePrivKey, activeMasternode.keyMasternode, activeMasternode.pubKeyMasternode))
+                return InitError(_("Invalid masternodeprivkey. Please see documenation."));
+
+            LogPrintf("  pubKeyMasternode: %s\n", EncodeDestination(activeMasternode.pubKeyMasternode.GetID()));
+        } else {
+            return InitError(_("You must specify a masternodeprivkey in the configuration. Please see documentation for help."));
+        }
+    }
+
+#ifdef ENABLE_WALLET
+    LogPrintf("Using masternode config file %s\n", GetConfigFile(gArgs.GetArg(MASTERNODE_CONF_FILENAME_ARG, MASTERNODE_CONF_FILENAME)).string());
+
+    for (std::shared_ptr<CWallet> const wallet : GetWallets()) {
+        CWallet* const pwallet = wallet.get();
+        if(gArgs.GetBoolArg("-mnconflock", true) && pwallet && (masternodeConfig.getCount() > 0)) {
+            LOCK(pwallet->cs_wallet);
+            LogPrintf("Locking Masternodes:\n");
+            uint256 mnTxHash;
+            int outputIndex;
+            for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+                mnTxHash.SetHex(mne.getTxHash());
+                outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
+                COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
+                // don't lock non-spendable outpoint (i.e. it's already spent or it's not from this wallet at all)
+                if(pwallet->IsMine(CTxIn(outpoint)) != ISMINE_SPENDABLE) {
+                    LogPrintf("  %s %s - IS NOT SPENDABLE, was not locked\n", mne.getTxHash(), mne.getOutputIndex());
+                    continue;
+                }
+                pwallet->LockCoin(outpoint);
+                LogPrintf("  %s %s - locked successfully\n", mne.getTxHash(), mne.getOutputIndex());
+            }
+        }
+    }
+
+    privateSendClient.nLiquidityProvider = std::min(std::max((int)gArgs.GetArg("-liquidityprovider", DEFAULT_PRIVATESEND_LIQUIDITY), 0), 100);
+    if(privateSendClient.nLiquidityProvider) {
+        // special case for liquidity providers only, normal clients should use default value
+        privateSendClient.SetMinBlocksToWait(privateSendClient.nLiquidityProvider * 15);
+    }
+
+    privateSendClient.fEnablePrivateSend = gArgs.GetBoolArg("-enableprivatesend", false);
+    privateSendClient.fPrivateSendMultiSession = gArgs.GetBoolArg("-privatesendmultisession", DEFAULT_PRIVATESEND_MULTISESSION);
+    privateSendClient.nPrivateSendRounds = std::min(std::max((int)gArgs.GetArg("-privatesendrounds", DEFAULT_PRIVATESEND_ROUNDS), 2), privateSendClient.nLiquidityProvider ? 99999 : 16);
+    privateSendClient.nPrivateSendAmount = std::min(std::max((int)gArgs.GetArg("-privatesendamount", DEFAULT_PRIVATESEND_AMOUNT), 2), 999999);
+#endif // ENABLE_WALLET
+
+    fEnableInstantSend = gArgs.GetBoolArg("-enableinstantsend", 1);
+    nInstantSendDepth = gArgs.GetArg("-instantsenddepth", DEFAULT_INSTANTSEND_DEPTH);
+    nInstantSendDepth = std::min(std::max(nInstantSendDepth, 0), 60);
+
+    //lite mode disables all Masternode and Darksend related functionality
+    fLiteMode = gArgs.GetBoolArg("-litemode", false);
+    if(fMasterNode && fLiteMode){
+        return InitError("You can not start a masternode in litemode");
+    }
+
+    LogPrintf("fLiteMode %d\n", fLiteMode);
+    LogPrintf("nInstantSendDepth %d\n", nInstantSendDepth);
+#ifdef ENABLE_WALLET
+    LogPrintf("PrivateSend rounds %d\n", privateSendClient.nPrivateSendRounds);
+    LogPrintf("PrivateSend amount %d\n", privateSendClient.nPrivateSendAmount);
+#endif // ENABLE_WALLET
+
+    CPrivateSend::InitStandardDenominations();
+
+    // ********************************************************* Step 11b: Load cache data
+
+    // LOAD SERIALIZED DAT FILES INTO DATA CACHES FOR INTERNAL USE
+
+    boost::filesystem::path pathDB = GetDataDir();
+    std::string strDBName;
+
+    strDBName = "mncache.dat";
+    uiInterface.InitMessage(_("Loading masternode cache..."));
+    CFlatDB<CMasternodeMan> flatdb1(strDBName, "magicMasternodeCache");
+    if(!flatdb1.Load(mnodeman)) {
+        return InitError(_("Failed to load masternode cache from") + "\n" + (pathDB / strDBName).string());
+    }
+
+    if(mnodeman.size()) {
+        strDBName = "mnpayments.dat";
+        uiInterface.InitMessage(_("Loading masternode payment cache..."));
+        CFlatDB<CMasternodePayments> flatdb2(strDBName, "magicMasternodePaymentsCache");
+        if(!flatdb2.Load(mnpayments)) {
+            return InitError(_("Failed to load masternode payments cache from") + "\n" + (pathDB / strDBName).string());
+        }
+
+        strDBName = "governance.dat";
+        uiInterface.InitMessage(_("Loading governance cache..."));
+        CFlatDB<CGovernanceManager> flatdb3(strDBName, "magicGovernanceCache");
+        if(!flatdb3.Load(governance)) {
+            return InitError(_("Failed to load governance cache from") + "\n" + (pathDB / strDBName).string());
+        }
+        governance.InitOnLoad();
+    } else {
+        uiInterface.InitMessage(_("Masternode cache is empty, skipping payments and governance cache..."));
+    }
+
+    strDBName = "netfulfilled.dat";
+    uiInterface.InitMessage(_("Loading fulfilled requests cache..."));
+    CFlatDB<CNetFulfilledRequestManager> flatdb4(strDBName, "magicFulfilledCache");
+    if(!flatdb4.Load(netfulfilledman)) {
+        return InitError(_("Failed to load fulfilled requests cache from") + "\n" + (pathDB / strDBName).string());
+    }
+
+    // ********************************************************* Step 11c: update block tip in Dash modules
+
+    // force UpdatedBlockTip to initialize nCachedBlockHeight for DS, MN payments and budgets
+    // but don't call it directly to prevent triggering of other listeners like zmq etc.
+    // GetMainSignals().UpdatedBlockTip(chainActive.Tip());
+    pdsNotificationInterface->InitializeCurrentBlockTip();
+
+    // ********************************************************* Step 11d: start dash-ps-<smth> threads
+
+    threadGroup.create_thread(boost::bind(&ThreadCheckPrivateSend, boost::ref(*g_connman)));
+    if (fMasterNode)
+        threadGroup.create_thread(boost::bind(&ThreadCheckPrivateSendServer, boost::ref(*g_connman)));
+#ifdef ENABLE_WALLET
+    else
+        threadGroup.create_thread(boost::bind(&ThreadCheckPrivateSendClient, boost::ref(*g_connman)));
+#endif // ENABLE_WALLET
+    //
 
     // ********************************************************* Step 12: start node
 

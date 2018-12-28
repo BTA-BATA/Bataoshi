@@ -33,11 +33,20 @@ const CBaseChainParams& BaseParams()
 std::unique_ptr<CBaseChainParams> CreateBaseChainParams(const std::string& chain)
 {
     if (chain == CBaseChainParams::MAIN)
-        return MakeUnique<CBaseChainParams>("", 8332);
+        // BATA BEGIN
+        //return MakeUnique<CBaseChainParams>("", 9469);
+        return MakeUnique<CBaseChainParams>("", 5493);
+        // BATA END
     else if (chain == CBaseChainParams::TESTNET)
-        return MakeUnique<CBaseChainParams>("testnet3", 18332);
+        // BATA BEGIN
+        //return MakeUnique<CBaseChainParams>("testnet", 19469);
+        return MakeUnique<CBaseChainParams>("testnet", 33812);
+        // BATA END
     else if (chain == CBaseChainParams::REGTEST)
-        return MakeUnique<CBaseChainParams>("regtest", 18443);
+        // BATA BEGIN
+        //return MakeUnique<CBaseChainParams>("regtest", 29469);
+        return MakeUnique<CBaseChainParams>("regtest", 29469); // rpc port not defined for regtest in Bata Core 0.10
+        // BATA END
     else
         throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
 }

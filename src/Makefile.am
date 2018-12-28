@@ -1,4 +1,6 @@
 # Copyright (c) 2013-2016 The Bitcoin Core developers
+# Copyright (c) 2014-2017 The Dash Core developers
+# Copyright (c) 2018 FXTC developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -19,6 +21,7 @@ else
 LIBUNIVALUE = $(UNIVALUE_LIBS)
 endif
 
+BITCOIN_CONFIG_INCLUDES=-I$(builddir)/config
 BITCOIN_INCLUDES=-I$(builddir) $(BDB_CPPFLAGS) $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS)
 
 BITCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
@@ -80,11 +83,11 @@ TESTS =
 BENCHMARKS =
 
 if BUILD_BITCOIND
-  bin_PROGRAMS += bitcoind
+  bin_PROGRAMS += batad
 endif
 
 if BUILD_BITCOIN_UTILS
-  bin_PROGRAMS += bitcoin-cli bitcoin-tx
+  bin_PROGRAMS += bata-cli bata-tx
 endif
 
 .PHONY: FORCE check-symbols check-security
@@ -204,6 +207,38 @@ BITCOIN_CORE_H = \
   zmq/zmqpublishnotifier.h \
   zmq/zmqrpc.h
 
+# dash core #
+BITCOIN_CORE_H += \
+  activemasternode.h \
+  cachemap.h \
+  cachemultimap.h \
+  dsnotificationinterface.h \
+  flatdatabase.h \
+  governance.h \
+  governance-classes.h \
+  governance-exceptions.h \
+  governance-misc.h \
+  governance-object.h \
+  governance-validators.h \
+  governance-vote.h \
+  governance-votedb.h \
+  instantx.h \
+  keepass.h \
+  leveldbwrapper.h \
+  masternode.h \
+  masternodeman.h \
+  masternode-payments.h \
+  masternode-sync.h \
+  masternodeconfig.h \
+  messagesigner.h \
+  netfulfilledman.h \
+  privatesend.h \
+  privatesend-client.h \
+  privatesend-server.h \
+  privatesend-util.h \
+  spork.h \
+  sporkdb.h
+
 
 obj/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/obj
@@ -258,6 +293,33 @@ libbitcoin_server_a_SOURCES = \
   versionbits.cpp \
   $(BITCOIN_CORE_H)
 
+# dash server
+libbitcoin_server_a_SOURCES += \
+  activemasternode.cpp \
+  dsnotificationinterface.cpp \
+  governance.cpp \
+  governance-classes.cpp \
+  governance-object.cpp \
+  governance-validators.cpp \
+  governance-vote.cpp \
+  governance-votedb.cpp \
+  instantx.cpp \
+  leveldbwrapper.cpp \
+  masternode.cpp \
+  masternodeman.cpp \
+  masternode-payments.cpp \
+  masternode-sync.cpp \
+  masternodeconfig.cpp \
+  messagesigner.cpp \
+  netfulfilledman.cpp \
+  privatesend.cpp \
+  privatesend-server.cpp \
+  rpc/governance.cpp \
+  rpc/masternode.cpp \
+  spork.cpp \
+  sporkdb.cpp
+
+
 if ENABLE_ZMQ
 libbitcoin_zmq_a_CPPFLAGS = $(BITCOIN_INCLUDES) $(ZMQ_CFLAGS)
 libbitcoin_zmq_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
@@ -289,9 +351,19 @@ libbitcoin_wallet_a_SOURCES = \
   wallet/coinselection.cpp \
   $(BITCOIN_CORE_H)
 
+# dash wallet
+libbitcoin_wallet_a_SOURCES += \
+  keepass.cpp \
+  privatesend-client.cpp \
+  privatesend-util.cpp
+
 # crypto primitives library
-crypto_libbitcoin_crypto_base_a_CPPFLAGS = $(AM_CPPFLAGS)
-crypto_libbitcoin_crypto_base_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+## FXTC BEGIN
+#crypto_libbitcoin_crypto_base_a_CPPFLAGS = $(AM_CPPFLAGS)
+#crypto_libbitcoin_crypto_base_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+crypto_libbitcoin_crypto_base_a_CPPFLAGS = $(AM_CPPFLAGS) $(PIC_FLAGS)
+crypto_libbitcoin_crypto_base_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS) $(PIC_FLAGS)
+## FXTC END
 crypto_libbitcoin_crypto_base_a_SOURCES = \
   crypto/aes.cpp \
   crypto/aes.h \
@@ -310,6 +382,58 @@ crypto_libbitcoin_crypto_base_a_SOURCES = \
   crypto/sha256.h \
   crypto/sha512.cpp \
   crypto/sha512.h
+
+# crypto algo libraries
+crypto_libbitcoin_crypto_base_a_SOURCES += \
+  crypto/aes_helper.c \
+  crypto/blake.c \
+  crypto/bmw.c \
+  crypto/cubehash.c \
+  crypto/echo.c \
+  crypto/groestl.c \
+  crypto/jh.c \
+  crypto/keccak.c \
+  crypto/luffa.c \
+  crypto/Lyra2.c \
+  crypto/Lyra2.h \
+  crypto/Lyra2Z.c \
+  crypto/Lyra2Z.h \
+  crypto/nist5.h \
+  crypto/scrypt-sse2.cpp \
+  crypto/scrypt.cpp \
+  crypto/scrypt.h \
+  crypto/shavite.c \
+  crypto/simd.c \
+  crypto/skein.c \
+  crypto/sph_blake.h \
+  crypto/sph_bmw.h \
+  crypto/sph_cubehash.h \
+  crypto/sph_echo.h \
+  crypto/sph_fugue.c \
+  crypto/sph_fugue.h \
+  crypto/sph_groestl.h \
+  crypto/sph_hamsi.c \
+  crypto/sph_hamsi.h \
+  crypto/sph_hamsi_helper.c \
+  crypto/sph_jh.h \
+  crypto/sph_keccak.h \
+  crypto/sph_luffa.h \
+  crypto/sph_sha2.c \
+  crypto/sph_sha2.h \
+  crypto/sph_sha512.c \
+  crypto/sph_shabal.c \
+  crypto/sph_shabal.h \
+  crypto/sph_shavite.h \
+  crypto/sph_simd.h \
+  crypto/sph_skein.h \
+  crypto/sph_types.h \
+  crypto/sph_whirlpool.c \
+  crypto/sph_whirlpool.h \
+  crypto/Sponge.c \
+  crypto/Sponge.h \
+  crypto/x11.h \
+  crypto/x16r.h
+
 
 if USE_ASM
 crypto_libbitcoin_crypto_base_a_SOURCES += crypto/sha256_sse4.cpp
@@ -438,16 +562,16 @@ nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
 # bitcoind binary #
-bitcoind_SOURCES = bitcoind.cpp
-bitcoind_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-bitcoind_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-bitcoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+batad_SOURCES = bitcoind.cpp
+batad_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+batad_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+batad_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-bitcoind_SOURCES += bitcoind-res.rc
+batad_SOURCES += bitcoind-res.rc
 endif
 
-bitcoind_LDADD = \
+batad_LDADD = \
   $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_WALLET) \
   $(LIBBITCOIN_COMMON) \
@@ -461,38 +585,38 @@ bitcoind_LDADD = \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
-bitcoind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
+batad_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
 
 # bitcoin-cli binary #
-bitcoin_cli_SOURCES = bitcoin-cli.cpp
-bitcoin_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
-bitcoin_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-bitcoin_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+bata_cli_SOURCES = bitcoin-cli.cpp
+bata_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
+bata_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+bata_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-bitcoin_cli_SOURCES += bitcoin-cli-res.rc
+bata_cli_SOURCES += bitcoin-cli-res.rc
 endif
 
-bitcoin_cli_LDADD = \
+bata_cli_LDADD = \
   $(LIBBITCOIN_CLI) \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO)
 
-bitcoin_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
+bata_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
 #
 
 # bitcoin-tx binary #
-bitcoin_tx_SOURCES = bitcoin-tx.cpp
-bitcoin_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-bitcoin_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-bitcoin_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+bata_tx_SOURCES = bitcoin-tx.cpp
+bata_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+bata_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+bata_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-bitcoin_tx_SOURCES += bitcoin-tx-res.rc
+bata_tx_SOURCES += bitcoin-tx-res.rc
 endif
 
-bitcoin_tx_LDADD = \
+bata_tx_LDADD = \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
@@ -500,7 +624,7 @@ bitcoin_tx_LDADD = \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBSECP256K1)
 
-bitcoin_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
+bata_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
 #
 
 # bitcoinconsensus library #
@@ -513,7 +637,7 @@ if GLIBC_BACK_COMPAT
 endif
 
 libbitcoinconsensus_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
-libbitcoinconsensus_la_LIBADD = $(LIBSECP256K1)
+libbitcoinconsensus_la_LIBADD = $(LIBSECP256K1) $(CRYPTO_LIBS)
 libbitcoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL
 libbitcoinconsensus_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 

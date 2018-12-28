@@ -1,5 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2018 FXTC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,6 +11,7 @@
 #include <random.h>
 #include <serialize.h>
 #include <utilstrencodings.h>
+#include <warnings.h>
 
 #include <stdarg.h>
 
@@ -71,6 +74,13 @@
 #include <malloc.h>
 #endif
 
+// Dash
+#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/lexical_cast.hpp>
+//
+
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/thread.hpp>
 #include <openssl/crypto.h>
@@ -81,12 +91,37 @@
 // Application startup time (used for uptime calculation)
 const int64_t nStartupTime = GetTime();
 
-const char * const BITCOIN_CONF_FILENAME = "bitcoin.conf";
-const char * const BITCOIN_PID_FILENAME = "bitcoind.pid";
+//Dash only features
+bool fMasterNode = false;
+bool fLiteMode = false;
+/**
+    nWalletBackups:
+        1..10   - number of automatic backups to keep
+        0       - disabled by command-line
+        -1      - disabled because of some error during run-time
+        -2      - disabled because wallet was locked and we were not able to replenish keypool
+*/
+int nWalletBackups = 10;
+//
+
+const char * const BITCOIN_CONF_FILENAME = "bata.conf";
+const char * const BITCOIN_PID_FILENAME = "batad.pid";
+
+const char * const MASTERNODE_CONF_FILENAME_ARG = "-mnconf";
+const char * const MASTERNODE_CONF_FILENAME = "masternode.conf";
 
 ArgsManager gArgs;
 
+// Dash
+bool fDebug = false;
+
+//-//bool fDaemon = false;
+//-//bool fServer = false;
+//-//std::string strMiscWarning; // already defined in warnings.h as SetMiscWarning(std::string)
+//
+
 CTranslationInterface translationInterface;
+int32_t miningAlgo = 0;
 
 /** Init OpenSSL library multithreading support */
 static std::unique_ptr<CCriticalSection[]> ppmutexOpenSSL;
@@ -273,7 +308,7 @@ public:
         std::pair<bool,std::string> found_result(false, std::string());
 
         // We pass "true" to GetArgHelper in order to return the last
-        // argument value seen from the command line (so "bitcoind -foo=bar
+        // argument value seen from the command line (so "fxtcd -foo=bar
         // -foo=baz" gives GetArg(am,"foo")=={true,"baz"}
         found_result = GetArgHelper(am.m_override_args, arg, true);
         if (found_result.first) {
@@ -685,7 +720,7 @@ static std::string FormatException(const std::exception* pex, const char* pszThr
     char pszModule[MAX_PATH] = "";
     GetModuleFileNameA(nullptr, pszModule, sizeof(pszModule));
 #else
-    const char* pszModule = "bitcoin";
+    const char* pszModule = "bata";
 #endif
     if (pex)
         return strprintf(
@@ -704,13 +739,13 @@ void PrintExceptionContinue(const std::exception* pex, const char* pszThread)
 
 fs::path GetDefaultDataDir()
 {
-    // Windows < Vista: C:\Documents and Settings\Username\Application Data\Bitcoin
-    // Windows >= Vista: C:\Users\Username\AppData\Roaming\Bitcoin
-    // Mac: ~/Library/Application Support/Bitcoin
-    // Unix: ~/.bitcoin
+    // Windows < Vista: C:\Documents and Settings\Username\Application Data\Bata
+    // Windows >= Vista: C:\Users\Username\AppData\Roaming\Bata
+    // Mac: ~/Library/Application Support/Bata
+    // Unix: ~/.bata
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / "Bitcoin";
+    return GetSpecialFolderPath(CSIDL_APPDATA) / "Bata";
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
@@ -720,10 +755,10 @@ fs::path GetDefaultDataDir()
         pathRet = fs::path(pszHome);
 #ifdef MAC_OSX
     // Mac
-    return pathRet / "Library/Application Support/Bitcoin";
+    return pathRet / "Library/Application Support/Bata";
 #else
     // Unix
-    return pathRet / ".bitcoin";
+    return pathRet / ".bata";
 #endif
 #endif
 }
@@ -733,6 +768,37 @@ static fs::path g_blocks_path_cache_net_specific;
 static fs::path pathCached;
 static fs::path pathCachedNetSpecific;
 static CCriticalSection csPathCached;
+
+// Dash
+static boost::filesystem::path backupsDirCached;
+static CCriticalSection csBackupsDirCached;
+
+const fs::path &GetBackupsDir()
+{
+    LOCK(csBackupsDirCached);
+
+    fs::path &backupsDir = backupsDirCached;
+
+    if (!backupsDir.empty())
+        return backupsDir;
+
+    if (gArgs.IsArgSet("-walletbackupsdir")) {
+        backupsDir = fs::system_complete(gArgs.GetArg("-walletbackupsdir", ""));
+        // Path must exist
+        if (fs::is_directory(backupsDir)) return backupsDir;
+        // Fallback to default path if it doesn't
+        LogPrintf("%s: Warning: incorrect parameter -walletbackupsdir, path must exist! Using default path.\n", __func__);
+        // FXTC TODO: check
+        //strMiscWarning = _("Warning: incorrect parameter -walletbackupsdir, path must exist! Using default path.");
+        std::string strMessage = strprintf(_("Warning: incorrect parameter -walletbackupsdir, path must exist! Using default path."));
+        // FXTC TODO: SetMiscWarning(strMessage);
+    }
+    // Default path
+    backupsDir = GetDataDir() / "backups";
+
+    return backupsDir;
+}
+//
 
 const fs::path &GetBlocksDir(bool fNetSpecific)
 {
@@ -1252,3 +1318,53 @@ int ScheduleBatchPriority(void)
     return 1;
 #endif
 }
+
+// Dash
+uint32_t StringVersionToInt(const std::string& strVersion)
+{
+    std::vector<std::string> tokens;
+    boost::split(tokens, strVersion, boost::is_any_of("."));
+    if(tokens.size() != 3)
+        throw std::bad_cast();
+    uint32_t nVersion = 0;
+    for(unsigned idx = 0; idx < 3; idx++)
+    {
+        if(tokens[idx].length() == 0)
+            throw std::bad_cast();
+        uint32_t value = boost::lexical_cast<uint32_t>(tokens[idx]);
+        if(value > 255)
+            throw std::bad_cast();
+        nVersion <<= 8;
+        nVersion |= value;
+    }
+    return nVersion;
+}
+
+std::string IntVersionToString(uint32_t nVersion)
+{
+    if((nVersion >> 24) > 0) // MSB is always 0
+        throw std::bad_cast();
+    if(nVersion == 0)
+        throw std::bad_cast();
+    std::array<std::string, 3> tokens;
+    for(unsigned idx = 0; idx < 3; idx++)
+    {
+        unsigned shift = (2 - idx) * 8;
+        uint32_t byteValue = (nVersion >> shift) & 0xff;
+        tokens[idx] = boost::lexical_cast<std::string>(byteValue);
+    }
+    return boost::join(tokens, ".");
+}
+
+std::string SafeIntVersionToString(uint32_t nVersion)
+{
+    try
+    {
+        return IntVersionToString(nVersion);
+    }
+    catch(const std::bad_cast&)
+    {
+        return "invalid_version";
+    }
+}
+//

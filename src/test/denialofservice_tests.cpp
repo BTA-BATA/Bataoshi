@@ -24,7 +24,10 @@
 extern bool AddOrphanTx(const CTransactionRef& tx, NodeId peer);
 extern void EraseOrphansFor(NodeId peer);
 extern unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans);
-extern void Misbehaving(NodeId nodeid, int howmuch, const std::string& message="");
+// Dash
+// FXTC TODO: previously defined in net_processing.h, Bitcoin Core removed from .h but needed for Dash
+//extern void Misbehaving(NodeId nodeid, int howmuch, const std::string& message="");
+//
 
 struct COrphanTx {
     CTransactionRef tx;

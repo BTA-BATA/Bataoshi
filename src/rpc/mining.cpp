@@ -1,5 +1,7 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2018 FXTC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -26,6 +28,12 @@
 #include <validationinterface.h>
 #include <warnings.h>
 
+// Dash
+#include "governance-classes.h"
+#include "masternode-payments.h"
+#include "masternode-sync.h"
+//
+
 #include <memory>
 #include <stdint.h>
 
@@ -44,7 +52,7 @@ unsigned int ParseConfirmTarget(const UniValue& value)
  * or from the last difficulty change if 'lookup' is nonpositive.
  * If 'height' is nonnegative, compute the estimate at the time when a given block was found.
  */
-static UniValue GetNetworkHashPS(int lookup, int height) {
+static UniValue GetNetworkHashPS(int lookup, int height, int32_t nAlgo) {
     CBlockIndex *pb = chainActive.Tip();
 
     if (height >= 0 && height < chainActive.Height())
@@ -76,6 +84,32 @@ static UniValue GetNetworkHashPS(int lookup, int height) {
         return 0;
 
     arith_uint256 workDiff = pb->nChainWork - pb0->nChainWork;
+    // FXTC BEGIN
+    switch (nAlgo)
+    {
+        case ALGO_SHA256D:
+            workDiff = pb->nChainWorkSha256d - pb0->nChainWorkSha256d;
+            break;
+        case ALGO_SCRYPT:
+            // BATA BEGIN
+            if (pb->nChainWorkScrypt > 0)
+            // BATA END
+            workDiff = pb->nChainWorkScrypt - pb0->nChainWorkScrypt;
+            break;
+        case ALGO_NIST5:
+            workDiff = pb->nChainWorkNist5 - pb0->nChainWorkNist5;
+            break;
+        case ALGO_LYRA2Z:
+            workDiff = pb->nChainWorkLyra2Z - pb0->nChainWorkLyra2Z;
+            break;
+        case ALGO_X11:
+            workDiff = pb->nChainWorkX11 - pb0->nChainWorkX11;
+            break;
+        case ALGO_X16R:
+            workDiff = pb->nChainWorkX16R - pb0->nChainWorkX16R;
+            break;
+    }
+    // FXTC END
     int64_t timeDiff = maxTime - minTime;
 
     return workDiff.getdouble() / timeDiff;
@@ -83,7 +117,7 @@ static UniValue GetNetworkHashPS(int lookup, int height) {
 
 static UniValue getnetworkhashps(const JSONRPCRequest& request)
 {
-    if (request.fHelp || request.params.size() > 2)
+    if (request.fHelp || request.params.size() > 3)
         throw std::runtime_error(
             "getnetworkhashps ( nblocks height )\n"
             "\nReturns the estimated network hashes per second based on the last n blocks.\n"
@@ -92,6 +126,7 @@ static UniValue getnetworkhashps(const JSONRPCRequest& request)
             "\nArguments:\n"
             "1. nblocks     (numeric, optional, default=120) The number of blocks, or -1 for blocks since last difficulty change.\n"
             "2. height      (numeric, optional, default=-1) To estimate at the time of the given height.\n"
+            "3. algorithm   (string, optional, default=actual wallet algorithm) Filter work for selected algorithm.\n"
             "\nResult:\n"
             "x             (numeric) Hashes per second estimated\n"
             "\nExamples:\n"
@@ -100,7 +135,7 @@ static UniValue getnetworkhashps(const JSONRPCRequest& request)
        );
 
     LOCK(cs_main);
-    return GetNetworkHashPS(!request.params[0].isNull() ? request.params[0].get_int() : 120, !request.params[1].isNull() ? request.params[1].get_int() : -1);
+    return GetNetworkHashPS(!request.params[0].isNull() ? request.params[0].get_int() : 120, !request.params[1].isNull() ? request.params[1].get_int() : -1, !request.params[2].isNull() ? GetAlgoId(request.params[2].get_str()) : miningAlgo);
 }
 
 UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript)
@@ -126,7 +161,7 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
             LOCK(cs_main);
             IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
         }
-        while (nMaxTries > 0 && pblock->nNonce < nInnerLoopCount && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) {
+        while (nMaxTries > 0 && pblock->nNonce < nInnerLoopCount && !CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits, Params().GetConsensus())) {
             ++pblock->nNonce;
             --nMaxTries;
         }
@@ -159,7 +194,7 @@ static UniValue generatetoaddress(const JSONRPCRequest& request)
             "\nMine blocks immediately to a specified address (before the RPC call returns)\n"
             "\nArguments:\n"
             "1. nblocks      (numeric, required) How many blocks are generated immediately.\n"
-            "2. address      (string, required) The address to send the newly generated bitcoin to.\n"
+            "2. address      (string, required) The address to send the newly generated Bata to.\n"
             "3. maxtries     (numeric, optional) How many iterations to try (default = 1000000).\n"
             "\nResult:\n"
             "[ blockhashes ]     (array) hashes of blocks generated\n"
@@ -197,6 +232,7 @@ static UniValue getmininginfo(const JSONRPCRequest& request)
             "  \"currentblockweight\": nnn, (numeric) The last block weight\n"
             "  \"currentblocktx\": nnn,     (numeric) The last block transaction\n"
             "  \"difficulty\": xxx.xxxxx    (numeric) The current difficulty\n"
+            "  \"algo\": \"...\"              (string) The current mining algo\n"
             "  \"networkhashps\": nnn,      (numeric) The network hashes per second\n"
             "  \"pooledtx\": n              (numeric) The size of the mempool\n"
             "  \"chain\": \"xxxx\",           (string) current network name as defined in BIP70 (main, test, regtest)\n"
@@ -215,6 +251,7 @@ static UniValue getmininginfo(const JSONRPCRequest& request)
     obj.pushKV("currentblockweight", (uint64_t)nLastBlockWeight);
     obj.pushKV("currentblocktx",   (uint64_t)nLastBlockTx);
     obj.pushKV("difficulty",       (double)GetDifficulty(chainActive.Tip()));
+    obj.pushKV("algo",             GetAlgoName(miningAlgo));
     obj.pushKV("networkhashps",    getnetworkhashps(request));
     obj.pushKV("pooledtx",         (uint64_t)mempool.size());
     obj.pushKV("chain",            Params().NetworkIDString());
@@ -358,6 +395,31 @@ static UniValue getblocktemplate(const JSONRPCRequest& request)
             "  \"curtime\" : ttt,                  (numeric) current timestamp in seconds since epoch (Jan 1 1970 GMT)\n"
             "  \"bits\" : \"xxxxxxxx\",              (string) compressed target of next block\n"
             "  \"height\" : n                      (numeric) The height of the next block\n"
+            // Dash
+            "  \"masternode\" : {                  (json object) required masternode payee that must be included in the next block\n"
+            "      \"payee\" : \"xxxx\",             (string) payee address\n"
+            "      \"script\" : \"xxxx\",            (string) payee scriptPubKey\n"
+            "      \"amount\": n                   (numeric) required amount to pay\n"
+            "  },\n"
+            "  \"masternode_payments_started\" :  true|false, (boolean) true, if masternode payments started\n"
+            "  \"masternode_payments_enforced\" : true|false, (boolean) true, if masternode payments are enforced\n"
+            "  \"superblock\" : [                  (array) required superblock payees that must be included in the next block\n"
+            "      {\n"
+            "         \"payee\" : \"xxxx\",          (string) payee address\n"
+            "         \"script\" : \"xxxx\",         (string) payee scriptPubKey\n"
+            "         \"amount\": n                (numeric) required amount to pay\n"
+            "      }\n"
+            "      ,...\n"
+            "  ],\n"
+            "  \"superblocks_started\" : true|false, (boolean) true, if superblock payments started\n"
+            "  \"superblocks_enabled\" : true|false  (boolean) true, if superblock payments are enabled\n" 
+            //
+            // FXTC BEGIN
+            "  \"founderreward\" : {               (json object) required founder reward that must be included in the next block\n"
+            "      \"payee\" : \"xxxx\",           (string) payee address\n"
+            "      \"amount\": n                   (numeric) required amount to pay\n"
+            // FXTC END
+            "  },\n"
             "}\n"
 
             "\nExamples:\n"
@@ -436,10 +498,25 @@ static UniValue getblocktemplate(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
 
     if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) == 0)
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Bitcoin is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Bata is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Bitcoin is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Bata is downloading blocks...");
+
+    // Dash
+    // when enforcement is on we need information about a masternode payee or otherwise our block is going to be orphaned by the network
+    CScript payee;
+    if (sporkManager.IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)
+        && !masternodeSync.IsWinnersListSynced()
+        && !mnpayments.GetBlockPayee(chainActive.Height() + 1, payee))
+            throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Dash Core is downloading masternode winners...");
+
+    // next bock is a superblock and we need governance info to correctly construct it
+    if (sporkManager.IsSporkActive(SPORK_9_SUPERBLOCKS_ENABLED)
+        && !masternodeSync.IsSynced()
+        && CSuperblock::IsValidBlockHeight(chainActive.Height() + 1))
+            throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Dash Core is syncing with network...");
+    //
 
     static unsigned int nTransactionsUpdatedLast;
 
@@ -646,7 +723,7 @@ static UniValue getblocktemplate(const JSONRPCRequest& request)
     result.pushKV("previousblockhash", pblock->hashPrevBlock.GetHex());
     result.pushKV("transactions", transactions);
     result.pushKV("coinbaseaux", aux);
-    result.pushKV("coinbasevalue", (int64_t)pblock->vtx[0]->vout[0].nValue);
+    result.pushKV("coinbasevalue", (int64_t)pblock->vtx[0]->GetValueOut());
     result.pushKV("longpollid", chainActive.Tip()->GetBlockHash().GetHex() + i64tostr(nTransactionsUpdatedLast));
     result.pushKV("target", hashTarget.GetHex());
     result.pushKV("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1);
@@ -668,6 +745,49 @@ static UniValue getblocktemplate(const JSONRPCRequest& request)
     result.pushKV("curtime", pblock->GetBlockTime());
     result.pushKV("bits", strprintf("%08x", pblock->nBits));
     result.pushKV("height", (int64_t)(pindexPrev->nHeight+1));
+
+    // Dash
+    UniValue masternodeObj(UniValue::VOBJ);
+    if(pblock->txoutMasternode != CTxOut()) {
+        CTxDestination address1;
+        ExtractDestination(pblock->txoutMasternode.scriptPubKey, address1);
+        std::string address2 = EncodeDestination(address1);
+        masternodeObj.push_back(Pair("payee", address2.c_str()));
+        masternodeObj.push_back(Pair("script", HexStr(pblock->txoutMasternode.scriptPubKey.begin(), pblock->txoutMasternode.scriptPubKey.end())));
+        masternodeObj.push_back(Pair("amount", pblock->txoutMasternode.nValue));
+    }
+    result.push_back(Pair("masternode", masternodeObj));
+    result.push_back(Pair("masternode_payments_started", pindexPrev->nHeight + 1 > Params().GetConsensus().nMasternodePaymentsStartBlock));
+    result.push_back(Pair("masternode_payments_enforced", sporkManager.IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)));
+
+    UniValue superblockObjArray(UniValue::VARR);
+    if(pblock->voutSuperblock.size()) {
+        for (const CTxOut& txout : pblock->voutSuperblock) {
+            UniValue entry(UniValue::VOBJ);
+            CTxDestination address1;
+            ExtractDestination(txout.scriptPubKey, address1);
+            std::string address2 = EncodeDestination(address1);
+            entry.push_back(Pair("payee", address2.c_str()));
+            entry.push_back(Pair("script", HexStr(txout.scriptPubKey.begin(), txout.scriptPubKey.end())));
+            entry.push_back(Pair("amount", txout.nValue));
+            superblockObjArray.push_back(entry);
+        }
+    }
+    result.push_back(Pair("superblock", superblockObjArray));
+    result.push_back(Pair("superblocks_started", pindexPrev->nHeight + 1 > Params().GetConsensus().nSuperblockStartBlock));
+    result.push_back(Pair("superblocks_enabled", sporkManager.IsSporkActive(SPORK_9_SUPERBLOCKS_ENABLED)));
+    //
+
+    // FXTC BEGIN
+    CAmount founderReward = GetFounderReward(pindexPrev->nHeight+1,pblock->vtx[0]->GetValueOut());
+    if (founderReward > 0) {
+        UniValue founderRewardObj(UniValue::VOBJ);
+        founderRewardObj.push_back(Pair("founderpayee", Params().FounderAddress().c_str()));
+        founderRewardObj.push_back(Pair("amount", founderReward));
+        result.push_back(Pair("founderreward", founderRewardObj));
+        result.push_back(Pair("founder_reward_enforced", true));
+    }
+    //FXTC END
 
     if (!pblocktemplate->vchCoinbaseCommitment.empty() && fSupportsSegwit) {
         result.pushKV("default_witness_commitment", HexStr(pblocktemplate->vchCoinbaseCommitment.begin(), pblocktemplate->vchCoinbaseCommitment.end()));
