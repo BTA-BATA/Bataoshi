@@ -33,8 +33,12 @@ void CSporkManager::LoadSporksFromDB()
 {
     // FXTC BEGIN
     //for (int i = SPORK_START; i <= SPORK_END; ++i) {
-    for (int i = SPORK_START; i <= SPORK_FXTC_END; ++i) {
+    // BATA BEGIN
+    //for (int i = SPORK_START; i <= SPORK_FXTC_END; ++i) {
+    for (int i = SPORK_START; i <= SPORK_BATA_END; ++i) {
         if (i > SPORK_END && i < SPORK_FXTC_START) i = SPORK_FXTC_START;
+        if (i > SPORK_FXTC_END && i < SPORK_BATA_START) i = SPORK_BATA_START;
+    // BATA END
     // FXTC END
         // Since not all spork IDs are in use, we have to exclude undefined IDs
         std::string strSpork = sporkManager.GetSporkNameByID(i);
