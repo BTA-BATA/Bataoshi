@@ -151,7 +151,10 @@ bool CMasternodeMan::PoSeBan(const COutPoint &outpoint)
 
 void CMasternodeMan::Check()
 {
-    LOCK(cs);
+    // FXTC BEGIN
+    //LOCK(cs);
+    LOCK2(cs_main, cs);
+    // FXTC END
 
     LogPrint(BCLog::MASTERNODE, "CMasternodeMan::Check -- nLastWatchdogVoteTime=%d, IsWatchdogActive()=%d\n", nLastWatchdogVoteTime, IsWatchdogActive());
 
@@ -1452,7 +1455,10 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CNode* pfrom, CMasternodeBr
 
 void CMasternodeMan::UpdateLastPaid(const CBlockIndex* pindex)
 {
-    LOCK(cs);
+    // FXTC BEGIN
+    //LOCK(cs);
+    LOCK2(cs_main, cs);
+    // FXTC END
 
     if(fLiteMode || !masternodeSync.IsWinnersListSynced() || mapMasternodes.empty()) return;
 
@@ -1510,7 +1516,10 @@ void CMasternodeMan::RemoveGovernanceObject(uint256 nGovernanceObjectHash)
 
 void CMasternodeMan::CheckMasternode(const CPubKey& pubKeyMasternode, bool fForce)
 {
-    LOCK(cs);
+    // FXTC BEGIN
+    //LOCK(cs)
+    LOCK2(cs_main, cs);
+    // FXTC END
     for (auto& mnpair : mapMasternodes) {
         if (mnpair.second.pubKeyMasternode == pubKeyMasternode) {
             mnpair.second.Check(fForce);

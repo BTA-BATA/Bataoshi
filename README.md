@@ -1,7 +1,7 @@
 Bata Core integration/staging tree
 ==================================
 
-https://fixedtradecoin.org
+https://bata.io
 
 Linux Build Instructions and Notes
 ==================================

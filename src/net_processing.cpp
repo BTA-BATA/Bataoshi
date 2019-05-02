@@ -1,7 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
 // Copyright (c) 2014-2017 The Dash Core developers
-// Copyright (c) 2018 FXTC developers
+// Copyright (c) 2018-2019 FXTC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -1337,11 +1337,7 @@ void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnm
 
         // FXTC BEGIN
         //while (it != pfrom->vRecvGetData.end() && (it->type == MSG_TX || it->type == MSG_WITNESS_TX))
-        while (it != pfrom->vRecvGetData.end() && (it->type == MSG_TX || it->type == MSG_WITNESS_TX ||
-            it->type == MSG_TXLOCK_REQUEST || it->type == MSG_TXLOCK_VOTE || it->type == MSG_SPORK ||
-            it->type == MSG_MASTERNODE_PAYMENT_VOTE || it->type == MSG_MASTERNODE_PAYMENT_BLOCK || it->type == MSG_MASTERNODE_ANNOUNCE ||
-            it->type == MSG_MASTERNODE_PING || it->type == MSG_DSTX || it->type == MSG_GOVERNANCE_OBJECT ||
-            it->type == MSG_GOVERNANCE_OBJECT_VOTE || it->type == MSG_MASTERNODE_VERIFY))
+        while (it != pfrom->vRecvGetData.end() && !(it->type == MSG_BLOCK || it->type == MSG_FILTERED_BLOCK || it->type == MSG_CMPCT_BLOCK || it->type == MSG_WITNESS_BLOCK))
         // FXTC END
         {
             if (interruptMsgProc)
@@ -1358,11 +1354,8 @@ void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnm
             LogPrint(BCLog::NET, "ProcessGetData -- inv = %s\n", inv.ToString());
             //
 
-          // Process non-Dash messages by original Bitcoin Core processor
-          if (!(it->type == MSG_TXLOCK_REQUEST || it->type == MSG_TXLOCK_VOTE || it->type == MSG_SPORK ||
-              it->type == MSG_MASTERNODE_PAYMENT_VOTE || it->type == MSG_MASTERNODE_PAYMENT_BLOCK || it->type == MSG_MASTERNODE_ANNOUNCE ||
-              it->type == MSG_MASTERNODE_PING || it->type == MSG_DSTX || it->type == MSG_GOVERNANCE_OBJECT ||
-              it->type == MSG_GOVERNANCE_OBJECT_VOTE || it->type == MSG_MASTERNODE_VERIFY)) {
+          // Process Bitcoin messages by original Bitcoin Core processor
+          if (inv.type == MSG_TX || inv.type == MSG_WITNESS_TX) {
             // FXTC END
 
             // Send stream from relay memory
